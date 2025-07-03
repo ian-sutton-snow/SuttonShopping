@@ -1,3 +1,5 @@
+import StoreListClient from '@/components/StoreListClient';
+
 export default function Home() {
-  return <></>;
+  return <StoreListClient />;
 }
