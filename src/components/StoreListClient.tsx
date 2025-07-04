@@ -251,9 +251,7 @@ export default function StoreListClient() {
                     </Link>
 
                     <div className="absolute top-2 right-2 flex items-center gap-1">
-                        {!isMobile && (
-                            <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab" />
-                        )}
+                        <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab hidden md:block" />
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="icon" className="h-8 w-8">

@@ -53,25 +53,29 @@ export default function ShoppingList({
   const isMobile = useIsMobile();
   const [undoToastId, setUndoToastId] = React.useState<string | null>(null);
 
-  const handleAddItem = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleAddItem = () => {
     if (newItemText.trim()) {
       onAddItem(newItemText.trim());
       setNewItemText('');
     }
   };
+  
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddItem();
+    }
+  };
 
-  const handleUndoRemove = (itemId: string) => {
+  const handleUndoRemove = (itemId: string, toastToDismissId: string) => {
     const timeoutId = removalTimeouts.current.get(itemId);
     if (timeoutId) {
       clearTimeout(timeoutId);
       removalTimeouts.current.delete(itemId);
     }
     setRemovingItems(prev => prev.filter(id => id !== itemId));
-    if (undoToastId) {
-      dismiss(undoToastId);
-      setUndoToastId(null);
-    }
+    dismiss(toastToDismissId);
+    setUndoToastId(null);
   };
 
   const handleToggleItem = (itemId: string) => {
@@ -88,7 +92,7 @@ export default function ShoppingList({
             action: (
               <Button variant="secondary" size="sm" onClick={(e) => {
                 e.preventDefault();
-                handleUndoRemove(itemId);
+                handleUndoRemove(itemId, newToastId);
               }}>
                 Undo
               </Button>
@@ -156,9 +160,7 @@ export default function ShoppingList({
             key={item.id}
             className="group flex items-center gap-2 p-2 pr-1 rounded-lg bg-white/80 shadow-sm transition-all duration-300"
           >
-            {!isMobile && (
-              <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab active:cursor-grabbing" />
-            )}
+            <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab active:cursor-grabbing hidden md:block" />
             <Checkbox
               id={`item-${item.id}`}
               checked={item.completed}
@@ -245,16 +247,17 @@ export default function ShoppingList({
 
       <Card>
         <CardContent className="p-4 md:p-6">
-          <form onSubmit={handleAddItem} className="flex gap-2 mb-6">
+          <div className="flex gap-2 mb-6">
             <Input
               value={newItemText}
               onChange={(e) => setNewItemText(e.target.value)}
+              onKeyDown={handleInputKeyDown}
               placeholder={listType === 'regular' ? "Add a regular item..." : "Add a one-off item..."}
             />
-            <Button type="submit" variant="secondary" className="bg-accent hover:bg-accent/90 text-accent-foreground">
+            <Button type="button" onClick={handleAddItem} variant="secondary" className="bg-accent hover:bg-accent/90 text-accent-foreground">
               <Plus className="h-4 w-4" />
             </Button>
-          </form>
+          </div>
           
           {activeItems.length === 0 && (listType === 'regular' || completedItems.length === 0) ? (
             <p className="text-center text-muted-foreground py-8">
