@@ -71,13 +71,12 @@ export default function ShoppingList({
       removalTimeouts.current.delete(itemId);
     }
     setRemovingItems(prev => prev.filter(id => id !== itemId));
-    onToggleItem(itemId); // Re-toggles the item to add it back
     dismiss();
   };
 
   const handleToggleItem = (itemId: string) => {
     if (listType === 'oneOff') {
-       const itemToComplete = items.find(i => i.id === itemId);
+      const itemToComplete = items.find(i => i.id === itemId);
       if (itemToComplete) {
         toast({
             title: `"${itemToComplete.text}" removed.`,
@@ -89,7 +88,7 @@ export default function ShoppingList({
         onToggleItem(itemId);
         setRemovingItems(prev => prev.filter(id => id !== itemId));
         removalTimeouts.current.delete(itemId);
-      }, 5000); // Wait 5s for undo
+      }, 5000);
       removalTimeouts.current.set(itemId, timeoutId);
     } else {
       onToggleItem(itemId);
@@ -97,7 +96,7 @@ export default function ShoppingList({
   };
 
   const handleDragSort = () => {
-    if (dragItem.current === null || dragOverItem.current === null || dragItem.current === dragOverItem.current) return;
+    if (isMobile || dragItem.current === null || dragOverItem.current === null || dragItem.current === dragOverItem.current) return;
     onReorder(dragItem.current, dragOverItem.current);
     dragItem.current = null;
     dragOverItem.current = null;
@@ -136,7 +135,6 @@ export default function ShoppingList({
   const renderItemList = (list: Item[], isCompletedList = false) => (
     <div className="space-y-2">
       {list.filter(item => !removingItems.includes(item.id)).map((item, index) => {
-        const isRemoving = removingItems.includes(item.id);
         const originalIndex = items.findIndex(i => i.id === item.id);
         
         const canMoveUp = index > 0;
@@ -145,20 +143,19 @@ export default function ShoppingList({
         return (
           <div
             key={item.id}
-            draggable
+            draggable={!isMobile}
             onDragStart={() => (dragItem.current = originalIndex)}
             onDragEnter={() => (dragOverItem.current = originalIndex)}
             onDragEnd={handleDragSort}
             onDragOver={(e) => e.preventDefault()}
             className={cn(
               "flex items-center gap-2 p-2 pr-1 rounded-lg bg-white/80 shadow-sm transition-all duration-300",
-              isRemoving ? 'animate-item-remove' : 'animate-item-add',
               'group'
             )}
           >
-            <div className="hidden md:block">
+            {!isMobile && (
               <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab active:cursor-grabbing" />
-            </div>
+            )}
             <Checkbox
               id={`item-${item.id}`}
               checked={item.completed}
