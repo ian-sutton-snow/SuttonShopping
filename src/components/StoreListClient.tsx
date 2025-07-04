@@ -50,7 +50,7 @@ const IconPicker = ({
   onSelect: (iconName: string) => void;
   iconComponents: { [key: string]: React.ComponentType<{ className?: string }> };
 }) => (
-  <div className="grid grid-cols-4 gap-6 pt-2">
+  <div className="grid grid-cols-4 gap-4 pt-2">
     {allIcons.map((iconName) => {
       const Icon = iconComponents[iconName];
       return (
@@ -59,12 +59,12 @@ const IconPicker = ({
           variant="outline"
           size="icon"
           className={cn(
-            "h-12 w-12",
+            "h-14 w-14",
             selectedIcon === iconName && "ring-2 ring-primary border-primary"
           )}
           onClick={() => onSelect(iconName)}
         >
-          <Icon className="h-6 w-6" />
+          <Icon className="h-7 w-7" />
         </Button>
       );
     })}
@@ -238,7 +238,7 @@ export default function StoreListClient() {
                     onDragOver={(e) => e.preventDefault()}
                     className="cursor-grab active:cursor-grabbing"
                   >
-                  <Card className="shadow-lg transition-transform transform hover:-translate-y-1 h-full flex flex-col hover:border-primary relative group">
+                  <Card className="shadow-lg transition-transform transform hover:-translate-y-1 h-full flex flex-col hover:border-primary relative">
                      <Link href={`/list/${store.id}`} className="focus:outline-none focus:ring-2 focus:ring-primary rounded-lg flex-grow flex flex-col">
                         <CardHeader className="flex flex-row items-center gap-4">
                             {Icon && <Icon className="h-8 w-8 text-primary" />}
@@ -250,7 +250,7 @@ export default function StoreListClient() {
                     </Link>
 
                     <div className="absolute top-2 right-2 flex items-center gap-1">
-                        <div className="hidden group-hover:block">
+                        <div>
                             <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab" />
                         </div>
                         <DropdownMenu>

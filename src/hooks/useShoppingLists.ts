@@ -124,6 +124,15 @@ export const useShoppingLists = () => {
     }
     updateStoreUnsafe(storeId, { lists: updatedLists });
   }, [getStore, updateStoreUnsafe]);
+  
+  const restoreItem = useCallback((storeId: string, listType: 'regular' | 'oneOff', item: Item) => {
+    const store = getStore(storeId);
+    if (store) {
+        const updatedLists = { ...store.lists };
+        updatedLists[listType] = [item, ...updatedLists[listType]];
+        updateStoreUnsafe(storeId, { lists: updatedLists });
+    }
+  }, [getStore, updateStoreUnsafe]);
 
   const reorderItems = useCallback((storeId: string, listType: 'regular' | 'oneOff', startIndex: number, endIndex: number) => {
     const store = getStore(storeId);
@@ -176,7 +185,7 @@ export const useShoppingLists = () => {
 
      const destinationList = sourceList === 'regular' ? 'oneOff' : 'regular';
      
-     if (destinationList === 'oneOff') {
+     if (destinationList === 'oneOff' || destinationList === 'regular') {
         itemToMove.completed = false;
      }
 
@@ -192,5 +201,5 @@ export const useShoppingLists = () => {
      updateStoreUnsafe(storeId, { lists: updatedLists });
   }, [getStore, updateStoreUnsafe]);
 
-  return { stores, addStore, editStore, deleteStore, reorderStores, getStore, addItem, toggleItem, reorderItems, deleteItem, renameItem, moveItem, isLoaded, iconComponents, icons };
+  return { stores, addStore, editStore, deleteStore, reorderStores, getStore, addItem, toggleItem, reorderItems, deleteItem, renameItem, moveItem, restoreItem, isLoaded, iconComponents, icons };
 };

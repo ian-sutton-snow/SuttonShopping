@@ -10,7 +10,7 @@ import { ArrowLeft, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import Header from '@/components/Header';
 import ShoppingList from '@/components/ShoppingList';
-import type { Store } from '@/lib/types';
+import type { Item, Store } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { TabbedViewIcon, SideBySideViewIcon } from '@/components/Icons';
 
@@ -24,6 +24,7 @@ export default function ShoppingListClient({ storeId }: { storeId: string }) {
     deleteItem,
     renameItem,
     moveItem,
+    restoreItem,
     isLoaded,
     iconComponents,
   } = useShoppingLists();
@@ -89,6 +90,7 @@ export default function ShoppingListClient({ storeId }: { storeId: string }) {
     onDeleteItem: (itemId: string) => deleteItem(store.id, listType, itemId),
     onRenameItem: (itemId: string, newText: string) => renameItem(store.id, listType, itemId, newText),
     onMoveItem: (itemId: string) => moveItem(store.id, itemId),
+    onRestoreItem: (item: Item) => restoreItem(store.id, listType, item),
   });
 
   return (
@@ -110,11 +112,11 @@ export default function ShoppingListClient({ storeId }: { storeId: string }) {
             </div>
             <div className='flex items-center gap-2'>
                 <Button variant={viewMode === 'tabs' ? 'secondary' : 'ghost'} size="icon" onClick={() => setViewMode('tabs')}>
-                    <TabbedViewIcon className="h-5 w-5" />
+                    <TabbedViewIcon className="h-7 w-7" />
                     <span className="sr-only">Tabbed View</span>
                 </Button>
                 <Button variant={viewMode === 'side-by-side' ? 'secondary' : 'ghost'} size="icon" onClick={() => setViewMode('side-by-side')}>
-                    <SideBySideViewIcon className="h-5 w-5" />
+                    <SideBySideViewIcon className="h-7 w-7" />
                     <span className="sr-only">Side-by-side View</span>
                 </Button>
             </div>

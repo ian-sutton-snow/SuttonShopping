@@ -3,7 +3,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: 'ShopSphere',
+  title: "Sutton's Shop",
   description: 'Your personal shopping list manager.',
   manifest: '/manifest.json',
   viewport: 'width=device-width, initial-scale=1',

@@ -13,6 +13,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { Label } from './ui/label';
+import { useToast } from '@/hooks/use-toast';
 
 interface ShoppingListProps {
   listType: 'regular' | 'oneOff';
@@ -23,6 +24,7 @@ interface ShoppingListProps {
   onDeleteItem: (itemId: string) => void;
   onRenameItem: (itemId: string, newText: string) => void;
   onMoveItem: (itemId: string) => void;
+  onRestoreItem: (item: Item) => void;
 }
 
 export default function ShoppingList({
@@ -34,6 +36,7 @@ export default function ShoppingList({
   onDeleteItem,
   onRenameItem,
   onMoveItem,
+  onRestoreItem,
 }: ShoppingListProps) {
   const [newItemText, setNewItemText] = React.useState('');
   const [removingItems, setRemovingItems] = React.useState<string[]>([]);
@@ -45,24 +48,46 @@ export default function ShoppingList({
   const [activeItem, setActiveItem] = React.useState<Item | null>(null);
   const [itemNewName, setItemNewName] = React.useState('');
 
-  const handleAddItem = (e: React.FormEvent) => {
-    e.preventDefault();
+  const [lastRemovedOneOff, setLastRemovedOneOff] = React.useState<Item | null>(null);
+  const { toast } = useToast();
+
+  const handleAddItem = () => {
     if (newItemText.trim()) {
       onAddItem(newItemText.trim());
       setNewItemText('');
+      setLastRemovedOneOff(null);
     }
+  };
+  
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleAddItem();
   };
 
   const handleToggleItem = (itemId: string) => {
     if (listType === 'oneOff') {
+       const itemToComplete = items.find(i => i.id === itemId);
+      if (itemToComplete) {
+        setLastRemovedOneOff(itemToComplete);
+        toast({
+            title: `"${itemToComplete.text}" removed.`,
+            action: <Button variant="secondary" size="sm" onClick={() => handleUndo(itemToComplete)}>Undo</Button>
+        });
+      }
       setRemovingItems(prev => [...prev, itemId]);
       setTimeout(() => {
         onToggleItem(itemId);
         setRemovingItems(prev => prev.filter(id => id !== itemId));
       }, 300);
     } else {
+      setLastRemovedOneOff(null);
       onToggleItem(itemId);
     }
+  };
+
+  const handleUndo = (item: Item) => {
+    onRestoreItem(item);
+    setLastRemovedOneOff(null);
   };
 
   const handleDragSort = () => {
@@ -117,7 +142,7 @@ export default function ShoppingList({
             onDragEnd={handleDragSort}
             onDragOver={(e) => e.preventDefault()}
             className={cn(
-              "flex items-center gap-2 p-2 pr-1 rounded-lg bg-white/80 shadow-sm transition-all duration-300 group",
+              "flex items-center gap-2 p-2 pr-1 rounded-lg bg-white/80 shadow-sm transition-all duration-300",
               isRemoving ? 'animate-item-remove' : 'animate-item-add',
               'cursor-grab active:cursor-grabbing'
             )}
@@ -140,7 +165,7 @@ export default function ShoppingList({
             </label>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button variant="ghost" size="icon" className="h-8 w-8">
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -200,7 +225,7 @@ export default function ShoppingList({
 
       <Card>
         <CardContent className="p-4 md:p-6">
-          <form onSubmit={handleAddItem} className="flex gap-2 mb-6">
+          <form onSubmit={handleFormSubmit} className="flex gap-2 mb-6">
             <Input
               value={newItemText}
               onChange={(e) => setNewItemText(e.target.value)}
@@ -210,7 +235,7 @@ export default function ShoppingList({
               <Plus className="h-4 w-4" />
             </Button>
           </form>
-
+          
           {activeItems.length === 0 && (listType === 'regular' || completedItems.length === 0) ? (
             <p className="text-center text-muted-foreground py-8">
               {listType === 'regular' ? "No active items. Add one above!" : "All clear! Add a one-off item."}
