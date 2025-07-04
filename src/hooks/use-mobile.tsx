@@ -1,19 +1,23 @@
 import * as React from "react"
 
-const MOBILE_BREAKPOINT = 768
-
 export function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
+  const [isMobile, setIsMobile] = React.useState(false)
 
   React.useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
-    const onChange = () => {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
+    // This media query is a more reliable way to check for touch-primary devices
+    // than just checking screen width. It will correctly identify a phone even
+    // in landscape mode.
+    const mql = window.matchMedia("(pointer: coarse)")
+
+    const checkDevice = () => {
+      setIsMobile(mql.matches)
     }
-    mql.addEventListener("change", onChange)
-    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
-    return () => mql.removeEventListener("change", onChange)
+
+    checkDevice() // Initial check
+    mql.addEventListener("change", checkDevice)
+
+    return () => mql.removeEventListener("change", checkDevice)
   }, [])
 
-  return !!isMobile
+  return isMobile
 }
