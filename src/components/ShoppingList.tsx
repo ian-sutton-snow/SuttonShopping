@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -53,11 +52,17 @@ export default function ShoppingList({
   const isMobile = useIsMobile();
   const [undoToastId, setUndoToastId] = React.useState<string | null>(null);
   
-  const handleAddItem = (event: React.FormEvent) => {
-    event.preventDefault();
+  const handleAddItem = () => {
     if (newItemText.trim()) {
       onAddItem(newItemText.trim());
       setNewItemText('');
+    }
+  };
+
+  const handleInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      handleAddItem();
     }
   };
 
@@ -215,7 +220,7 @@ export default function ShoppingList({
   return (
     <>
       <Dialog open={isRenameDialogOpen} onOpenChange={setIsRenameDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:top-[25%]">
           <DialogHeader>
             <DialogTitle>Rename Item</DialogTitle>
           </DialogHeader>
@@ -230,7 +235,7 @@ export default function ShoppingList({
         </DialogContent>
       </Dialog>
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="sm:top-[25%]">
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
@@ -246,16 +251,17 @@ export default function ShoppingList({
 
       <Card>
         <CardContent className="p-4 md:p-6">
-          <form onSubmit={handleAddItem} className="flex gap-2 mb-6">
+          <div className="flex gap-2 mb-6">
             <Input
               value={newItemText}
               onChange={(e) => setNewItemText(e.target.value)}
+              onKeyDown={handleInputKeyDown}
               placeholder={listType === 'regular' ? "Add a regular item..." : "Add a one-off item..."}
             />
-            <Button type="submit" variant="secondary" className="bg-accent hover:bg-accent/90 text-accent-foreground">
+            <Button onClick={handleAddItem} type="button" variant="secondary" className="bg-accent hover:bg-accent/90 text-accent-foreground">
               <Plus className="h-4 w-4" />
             </Button>
-          </form>
+          </div>
           
           {activeItems.length === 0 && (listType === 'regular' || completedItems.length === 0) ? (
             <p className="text-center text-muted-foreground py-8">
