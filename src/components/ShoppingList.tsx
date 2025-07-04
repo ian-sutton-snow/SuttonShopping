@@ -15,18 +15,17 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { Label } from './ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface ShoppingListProps {
   listType: 'regular' | 'oneOff';
   items: Item[];
   onAddItem: (text: string) => void;
   onToggleItem: (itemId: string) => void;
-  onReorder: (startIndex: number, endIndex: number) => void;
   onDeleteItem: (itemId: string) => void;
   onRenameItem: (itemId: string, newText: string) => void;
   onMoveItem: (itemId: string) => void;
   onMoveItemOrder: (itemId: string, direction: 'up' | 'down') => void;
-  isMobile?: boolean;
   viewMode?: 'tabs' | 'side-by-side';
 }
 
@@ -35,18 +34,14 @@ export default function ShoppingList({
   items,
   onAddItem,
   onToggleItem,
-  onReorder,
   onDeleteItem,
   onRenameItem,
   onMoveItem,
   onMoveItemOrder,
-  isMobile = false,
   viewMode = 'tabs',
 }: ShoppingListProps) {
   const [newItemText, setNewItemText] = React.useState('');
   const [removingItems, setRemovingItems] = React.useState<string[]>([]);
-  const dragItem = React.useRef<number | null>(null);
-  const dragOverItem = React.useRef<number | null>(null);
   const removalTimeouts = React.useRef(new Map<string, NodeJS.Timeout>());
 
   const [isRenameDialogOpen, setIsRenameDialogOpen] = React.useState(false);
@@ -55,14 +50,21 @@ export default function ShoppingList({
   const [itemNewName, setItemNewName] = React.useState('');
 
   const { toast, dismiss } = useToast();
+  const isMobile = useIsMobile();
 
-  const handleAddItem = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleAddItem = () => {
     if (newItemText.trim()) {
       onAddItem(newItemText.trim());
       setNewItemText('');
     }
   };
+
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddItem();
+    }
+  }
 
   const handleUndoRemove = (itemId: string) => {
     const timeoutId = removalTimeouts.current.get(itemId);
@@ -77,29 +79,37 @@ export default function ShoppingList({
   const handleToggleItem = (itemId: string) => {
     if (listType === 'oneOff') {
       const itemToComplete = items.find(i => i.id === itemId);
-      if (itemToComplete) {
+      if (itemToComplete && !removingItems.includes(itemId)) {
         toast({
             title: `"${itemToComplete.text}" removed.`,
-            action: <Button variant="secondary" size="sm" onClick={() => handleUndoRemove(itemId)}>Undo</Button>
+            duration: 5000,
+            action: (
+              <Button variant="secondary" size="sm" onClick={(e) => {
+                e.preventDefault();
+                handleUndoRemove(itemId);
+              }}>
+                Undo
+              </Button>
+            ),
         });
+
+        setRemovingItems(prev => [...prev, itemId]);
+
+        const timeoutId = setTimeout(() => {
+          onToggleItem(itemId);
+          setRemovingItems(prev => {
+            const newRemoving = prev.filter(id => id !== itemId);
+            if (newRemoving.length === 0) {
+              removalTimeouts.current.delete(itemId);
+            }
+            return newRemoving;
+          });
+        }, 5000);
+        removalTimeouts.current.set(itemId, timeoutId);
       }
-      setRemovingItems(prev => [...prev, itemId]);
-      const timeoutId = setTimeout(() => {
-        onToggleItem(itemId);
-        setRemovingItems(prev => prev.filter(id => id !== itemId));
-        removalTimeouts.current.delete(itemId);
-      }, 5000);
-      removalTimeouts.current.set(itemId, timeoutId);
     } else {
       onToggleItem(itemId);
     }
-  };
-
-  const handleDragSort = () => {
-    if (isMobile || dragItem.current === null || dragOverItem.current === null || dragItem.current === dragOverItem.current) return;
-    onReorder(dragItem.current, dragOverItem.current);
-    dragItem.current = null;
-    dragOverItem.current = null;
   };
 
   const openRenameDialog = (item: Item) => {
@@ -135,23 +145,13 @@ export default function ShoppingList({
   const renderItemList = (list: Item[], isCompletedList = false) => (
     <div className="space-y-2">
       {list.filter(item => !removingItems.includes(item.id)).map((item, index) => {
-        const originalIndex = items.findIndex(i => i.id === item.id);
-        
         const canMoveUp = index > 0;
         const canMoveDown = index < list.length - 1;
 
         return (
           <div
             key={item.id}
-            draggable={!isMobile}
-            onDragStart={() => (dragItem.current = originalIndex)}
-            onDragEnter={() => (dragOverItem.current = originalIndex)}
-            onDragEnd={handleDragSort}
-            onDragOver={(e) => e.preventDefault()}
-            className={cn(
-              "flex items-center gap-2 p-2 pr-1 rounded-lg bg-white/80 shadow-sm transition-all duration-300",
-              'group'
-            )}
+            className="group flex items-center gap-2 p-2 pr-1 rounded-lg bg-white/80 shadow-sm transition-all duration-300"
           >
             {!isMobile && (
               <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab active:cursor-grabbing" />
@@ -210,7 +210,6 @@ export default function ShoppingList({
 
   return (
     <>
-      {/* Dialogs for item actions */}
       <Dialog open={isRenameDialogOpen} onOpenChange={setIsRenameDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -243,16 +242,17 @@ export default function ShoppingList({
 
       <Card>
         <CardContent className="p-4 md:p-6">
-          <form onSubmit={handleAddItem} className="flex gap-2 mb-6">
+          <div className="flex gap-2 mb-6">
             <Input
               value={newItemText}
               onChange={(e) => setNewItemText(e.target.value)}
+              onKeyDown={handleInputKeyDown}
               placeholder={listType === 'regular' ? "Add a regular item..." : "Add a one-off item..."}
             />
-            <Button type="submit" variant="secondary" className="bg-accent hover:bg-accent/90 text-accent-foreground">
+            <Button onClick={handleAddItem} variant="secondary" className="bg-accent hover:bg-accent/90 text-accent-foreground">
               <Plus className="h-4 w-4" />
             </Button>
-          </form>
+          </div>
           
           {activeItems.length === 0 && (listType === 'regular' || completedItems.length === 0) ? (
             <p className="text-center text-muted-foreground py-8">
