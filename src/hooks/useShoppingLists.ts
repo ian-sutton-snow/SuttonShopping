@@ -3,11 +3,11 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import type { Store, Item } from '@/lib/types';
-import { Home, ShoppingBasket, ShoppingCart, Store as StoreIcon, Car, Sprout, Shirt, Dumbbell, Wine, Bike, Gift, BookOpen, Dog } from 'lucide-react';
+import { Home, ShoppingBasket, ShoppingCart, Store as StoreIcon, Car, Sprout, Shirt, Dumbbell, Wine, Bike, Gift, BookOpen, Check } from 'lucide-react';
 
 const STORE_KEY = 'shopsphere-stores';
 
-export const icons = ['ShoppingCart', 'Store', 'Home', 'ShoppingBasket', 'Car', 'Sprout', 'Shirt', 'Dumbbell', 'Wine', 'Bike', 'Gift', 'BookOpen', 'Dog'];
+export const icons = ['ShoppingCart', 'Store', 'Home', 'ShoppingBasket', 'Car', 'Sprout', 'Shirt', 'Dumbbell', 'Wine', 'Bike', 'Gift', 'BookOpen', 'Check'];
 export const iconComponents: { [key: string]: React.ComponentType<{ className?: string }> } = {
   ShoppingCart,
   Store: StoreIcon,
@@ -21,7 +21,7 @@ export const iconComponents: { [key: string]: React.ComponentType<{ className?: 
   Bike,
   Gift,
   BookOpen,
-  Dog,
+  Check,
 };
 
 const getInitialStores = (): Store[] => {
@@ -177,6 +177,10 @@ export const useShoppingLists = () => {
 
      const destinationList = sourceList === 'regular' ? 'oneOff' : 'regular';
      
+     if (destinationList === 'oneOff') {
+        itemToMove.completed = false;
+     }
+
      const updatedSourceList = store.lists[sourceList].filter(i => i.id !== itemId);
      const updatedDestinationList = [itemToMove, ...store.lists[destinationList]];
      
