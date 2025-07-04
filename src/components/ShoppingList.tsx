@@ -53,17 +53,11 @@ export default function ShoppingList({
   const isMobile = useIsMobile();
   const [undoToastId, setUndoToastId] = React.useState<string | null>(null);
 
-  const handleAddItem = () => {
+  const handleAddItem = (e: React.FormEvent) => {
+    e.preventDefault();
     if (newItemText.trim()) {
       onAddItem(newItemText.trim());
       setNewItemText('');
-    }
-  };
-  
-  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleAddItem();
     }
   };
 
@@ -160,7 +154,7 @@ export default function ShoppingList({
             key={item.id}
             className="group flex items-center gap-2 p-2 pr-1 rounded-lg bg-white/80 shadow-sm transition-all duration-300"
           >
-            <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab active:cursor-grabbing hidden md:block" />
+            {!isMobile && <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab active:cursor-grabbing" />}
             <Checkbox
               id={`item-${item.id}`}
               checked={item.completed}
@@ -247,17 +241,16 @@ export default function ShoppingList({
 
       <Card>
         <CardContent className="p-4 md:p-6">
-          <div className="flex gap-2 mb-6">
+          <form onSubmit={handleAddItem} className="flex gap-2 mb-6">
             <Input
               value={newItemText}
               onChange={(e) => setNewItemText(e.target.value)}
-              onKeyDown={handleInputKeyDown}
               placeholder={listType === 'regular' ? "Add a regular item..." : "Add a one-off item..."}
             />
-            <Button type="button" onClick={handleAddItem} variant="secondary" className="bg-accent hover:bg-accent/90 text-accent-foreground">
+            <Button type="submit" variant="secondary" className="bg-accent hover:bg-accent/90 text-accent-foreground">
               <Plus className="h-4 w-4" />
             </Button>
-          </div>
+          </form>
           
           {activeItems.length === 0 && (listType === 'regular' || completedItems.length === 0) ? (
             <p className="text-center text-muted-foreground py-8">

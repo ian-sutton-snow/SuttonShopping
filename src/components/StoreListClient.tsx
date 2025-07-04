@@ -52,7 +52,7 @@ const IconPicker = ({
   onSelect: (iconName: string) => void;
   iconComponents: { [key: string]: React.ComponentType<{ className?: string }> };
 }) => (
-  <div className="grid grid-cols-4 gap-2 pt-1">
+  <div className="grid grid-cols-4 gap-4 pt-1">
     {allIcons.map((iconName) => {
       const Icon = iconComponents[iconName];
       return (
@@ -144,7 +144,7 @@ export default function StoreListClient() {
       <Header />
       <main className="flex-1 container mx-auto p-4 md:p-8">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold font-headline text-gray-800">Your Stores</h1>
+          <h1 className="text-3xl font-bold font-headline text-gray-800">My Stores</h1>
             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                 <DialogTrigger asChild>
                     <Button onClick={openAddDialog}>
@@ -251,7 +251,7 @@ export default function StoreListClient() {
                     </Link>
 
                     <div className="absolute top-2 right-2 flex items-center gap-1">
-                        <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab hidden md:block" />
+                        {!isMobile && <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab" />}
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="icon" className="h-8 w-8">
