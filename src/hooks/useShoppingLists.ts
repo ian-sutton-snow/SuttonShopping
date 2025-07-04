@@ -125,15 +125,6 @@ export const useShoppingLists = () => {
     updateStoreUnsafe(storeId, { lists: updatedLists });
   }, [getStore, updateStoreUnsafe]);
   
-  const restoreItem = useCallback((storeId: string, listType: 'regular' | 'oneOff', item: Item) => {
-    const store = getStore(storeId);
-    if (store) {
-        const updatedLists = { ...store.lists };
-        updatedLists[listType] = [item, ...updatedLists[listType]];
-        updateStoreUnsafe(storeId, { lists: updatedLists });
-    }
-  }, [getStore, updateStoreUnsafe]);
-
   const reorderItems = useCallback((storeId: string, listType: 'regular' | 'oneOff', startIndex: number, endIndex: number) => {
     const store = getStore(storeId);
     if (!store) return;
@@ -185,9 +176,7 @@ export const useShoppingLists = () => {
 
      const destinationList = sourceList === 'regular' ? 'oneOff' : 'regular';
      
-     if (destinationList === 'oneOff' || destinationList === 'regular') {
-        itemToMove.completed = false;
-     }
+     itemToMove.completed = false;
 
      const updatedSourceList = store.lists[sourceList].filter(i => i.id !== itemId);
      const updatedDestinationList = [itemToMove, ...store.lists[destinationList]];
@@ -201,5 +190,56 @@ export const useShoppingLists = () => {
      updateStoreUnsafe(storeId, { lists: updatedLists });
   }, [getStore, updateStoreUnsafe]);
 
-  return { stores, addStore, editStore, deleteStore, reorderStores, getStore, addItem, toggleItem, reorderItems, deleteItem, renameItem, moveItem, restoreItem, isLoaded, iconComponents, icons };
+  const moveItemOrder = useCallback((storeId: string, itemId: string, direction: 'up' | 'down') => {
+    const store = getStore(storeId);
+    if (!store) return;
+
+    let listType: 'regular' | 'oneOff' | null = null;
+    let itemIndex = -1;
+    let isCompleted = false;
+
+    // Find the item and its list
+    let regularItem = store.lists.regular.find(i => i.id === itemId);
+    if (regularItem) {
+        listType = 'regular';
+        isCompleted = regularItem.completed;
+    } else if (store.lists.oneOff.some(i => i.id === itemId)) {
+        listType = 'oneOff';
+    } else {
+        return; // Item not found
+    }
+
+    const list = listType === 'regular' 
+        ? (isCompleted ? store.lists.regular.filter(i => i.completed) : store.lists.regular.filter(i => !i.completed))
+        : store.lists.oneOff;
+    
+    itemIndex = list.findIndex(i => i.id === itemId);
+
+    if (itemIndex === -1) return;
+
+    const newIndex = direction === 'up' ? itemIndex - 1 : itemIndex + 1;
+    if (newIndex < 0 || newIndex >= list.length) return; // Cannot move further
+
+    const reorderedSubList = [...list];
+    const [item] = reorderedSubList.splice(itemIndex, 1);
+    reorderedSubList.splice(newIndex, 0, item);
+    
+    let finalRegularList: Item[];
+    if (listType === 'regular') {
+      const otherHalf = isCompleted ? store.lists.regular.filter(i => !i.completed) : store.lists.regular.filter(i => i.completed);
+      finalRegularList = isCompleted ? [...otherHalf, ...reorderedSubList] : [...reorderedSubList, ...otherHalf];
+    } else {
+      finalRegularList = store.lists.regular;
+    }
+
+    const updatedLists = {
+        regular: listType === 'regular' ? finalRegularList : store.lists.regular,
+        oneOff: listType === 'oneOff' ? reorderedSubList : store.lists.oneOff,
+    };
+
+    updateStoreUnsafe(storeId, { lists: updatedLists });
+
+  }, [getStore, updateStoreUnsafe]);
+
+  return { stores, addStore, editStore, deleteStore, reorderStores, getStore, addItem, toggleItem, reorderItems, deleteItem, renameItem, moveItem, moveItemOrder, isLoaded, iconComponents, icons };
 };

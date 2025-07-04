@@ -24,7 +24,7 @@ export default function ShoppingListClient({ storeId }: { storeId: string }) {
     deleteItem,
     renameItem,
     moveItem,
-    restoreItem,
+    moveItemOrder,
     isLoaded,
     iconComponents,
   } = useShoppingLists();
@@ -90,7 +90,7 @@ export default function ShoppingListClient({ storeId }: { storeId: string }) {
     onDeleteItem: (itemId: string) => deleteItem(store.id, listType, itemId),
     onRenameItem: (itemId: string, newText: string) => renameItem(store.id, listType, itemId, newText),
     onMoveItem: (itemId: string) => moveItem(store.id, itemId),
-    onRestoreItem: (item: Item) => restoreItem(store.id, listType, item),
+    onMoveItemOrder: (itemId: string, direction: 'up' | 'down') => moveItemOrder(store.id, itemId, direction),
   });
 
   return (
@@ -112,11 +112,11 @@ export default function ShoppingListClient({ storeId }: { storeId: string }) {
             </div>
             <div className='flex items-center gap-2'>
                 <Button variant={viewMode === 'tabs' ? 'secondary' : 'ghost'} size="icon" onClick={() => setViewMode('tabs')}>
-                    <TabbedViewIcon className="h-7 w-7" />
+                    <TabbedViewIcon className="h-8 w-8" />
                     <span className="sr-only">Tabbed View</span>
                 </Button>
                 <Button variant={viewMode === 'side-by-side' ? 'secondary' : 'ghost'} size="icon" onClick={() => setViewMode('side-by-side')}>
-                    <SideBySideViewIcon className="h-7 w-7" />
+                    <SideBySideViewIcon className="h-8 w-8" />
                     <span className="sr-only">Side-by-side View</span>
                 </Button>
             </div>
