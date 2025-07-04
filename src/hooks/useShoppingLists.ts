@@ -88,6 +88,21 @@ export const useShoppingLists = () => {
     });
   }, []);
 
+  const moveStoreOrder = useCallback((storeId: string, direction: 'up' | 'down') => {
+    setStores(prevStores => {
+      const storeIndex = prevStores.findIndex(s => s.id === storeId);
+      if (storeIndex === -1) return prevStores;
+
+      const newIndex = direction === 'up' ? storeIndex - 1 : storeIndex + 1;
+      if (newIndex < 0 || newIndex >= prevStores.length) return prevStores;
+
+      const reorderedStores = [...prevStores];
+      const [movedStore] = reorderedStores.splice(storeIndex, 1);
+      reorderedStores.splice(newIndex, 0, movedStore);
+      return reorderedStores;
+    });
+  }, []);
+
   const getStore = useCallback((storeId: string) => {
     return stores.find((s) => s.id === storeId);
   }, [stores]);
@@ -176,7 +191,8 @@ export const useShoppingLists = () => {
 
      const destinationList = sourceList === 'regular' ? 'oneOff' : 'regular';
      
-     itemToMove.completed = false;
+     // When moving, always mark as incomplete
+     itemToMove = { ...itemToMove, completed: false };
 
      const updatedSourceList = store.lists[sourceList].filter(i => i.id !== itemId);
      const updatedDestinationList = [itemToMove, ...store.lists[destinationList]];
@@ -195,7 +211,6 @@ export const useShoppingLists = () => {
     if (!store) return;
 
     let listType: 'regular' | 'oneOff' | null = null;
-    let itemIndex = -1;
     let isCompleted = false;
 
     // Find the item and its list
@@ -209,18 +224,18 @@ export const useShoppingLists = () => {
         return; // Item not found
     }
 
-    const list = listType === 'regular' 
+    const listToReorder = listType === 'regular' 
         ? (isCompleted ? store.lists.regular.filter(i => i.completed) : store.lists.regular.filter(i => !i.completed))
         : store.lists.oneOff;
     
-    itemIndex = list.findIndex(i => i.id === itemId);
+    const itemIndex = listToReorder.findIndex(i => i.id === itemId);
 
     if (itemIndex === -1) return;
 
     const newIndex = direction === 'up' ? itemIndex - 1 : itemIndex + 1;
-    if (newIndex < 0 || newIndex >= list.length) return; // Cannot move further
+    if (newIndex < 0 || newIndex >= listToReorder.length) return; // Cannot move further
 
-    const reorderedSubList = [...list];
+    const reorderedSubList = [...listToReorder];
     const [item] = reorderedSubList.splice(itemIndex, 1);
     reorderedSubList.splice(newIndex, 0, item);
     
@@ -241,5 +256,5 @@ export const useShoppingLists = () => {
 
   }, [getStore, updateStoreUnsafe]);
 
-  return { stores, addStore, editStore, deleteStore, reorderStores, getStore, addItem, toggleItem, reorderItems, deleteItem, renameItem, moveItem, moveItemOrder, isLoaded, iconComponents, icons };
+  return { stores, addStore, editStore, deleteStore, reorderStores, moveStoreOrder, getStore, addItem, toggleItem, reorderItems, deleteItem, renameItem, moveItem, moveItemOrder, isLoaded, iconComponents, icons };
 };

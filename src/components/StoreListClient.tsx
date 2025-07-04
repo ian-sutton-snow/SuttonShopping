@@ -29,11 +29,12 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, MoreHorizontal, Pencil, Trash2, GripVertical, ShoppingBasket } from 'lucide-react';
+import { Plus, MoreHorizontal, Pencil, Trash2, GripVertical, ShoppingBasket, MoveUp, MoveDown } from 'lucide-react';
 import Header from '@/components/Header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Store } from '@/lib/types';
@@ -72,7 +73,7 @@ const IconPicker = ({
 );
 
 export default function StoreListClient() {
-  const { stores, addStore, editStore, deleteStore, reorderStores, isLoaded, iconComponents, icons } = useShoppingLists();
+  const { stores, addStore, editStore, deleteStore, reorderStores, moveStoreOrder, isLoaded, iconComponents, icons } = useShoppingLists();
   
   // State for dialogs
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
@@ -228,6 +229,8 @@ export default function StoreListClient() {
             {stores.map((store, index) => {
               const Icon = iconComponents[store.icon];
               const totalItems = store.lists.regular.length + store.lists.oneOff.length;
+              const canMoveUp = index > 0;
+              const canMoveDown = index < stores.length - 1;
               return (
                  <div
                     key={store.id}
@@ -250,7 +253,7 @@ export default function StoreListClient() {
                     </Link>
 
                     <div className="absolute top-2 right-2 flex items-center gap-1">
-                        <div>
+                        <div className="hidden md:block">
                             <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab" />
                         </div>
                         <DropdownMenu>
@@ -260,6 +263,15 @@ export default function StoreListClient() {
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => moveStoreOrder(store.id, 'up')} disabled={!canMoveUp}>
+                                    <MoveUp className="mr-2 h-4 w-4" />
+                                    <span>Move Up</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => moveStoreOrder(store.id, 'down')} disabled={!canMoveDown}>
+                                    <MoveDown className="mr-2 h-4 w-4" />
+                                    <span>Move Down</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={() => openEditDialog(store)}>
                                     <Pencil className="mr-2 h-4 w-4" />
                                     <span>Edit</span>

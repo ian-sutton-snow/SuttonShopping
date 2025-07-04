@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -25,6 +26,8 @@ interface ShoppingListProps {
   onRenameItem: (itemId: string, newText: string) => void;
   onMoveItem: (itemId: string) => void;
   onMoveItemOrder: (itemId: string, direction: 'up' | 'down') => void;
+  isMobile?: boolean;
+  viewMode?: 'tabs' | 'side-by-side';
 }
 
 export default function ShoppingList({
@@ -37,6 +40,8 @@ export default function ShoppingList({
   onRenameItem,
   onMoveItem,
   onMoveItemOrder,
+  isMobile = false,
+  viewMode = 'tabs',
 }: ShoppingListProps) {
   const [newItemText, setNewItemText] = React.useState('');
   const [removingItems, setRemovingItems] = React.useState<string[]>([]);
@@ -49,19 +54,13 @@ export default function ShoppingList({
   const [activeItem, setActiveItem] = React.useState<Item | null>(null);
   const [itemNewName, setItemNewName] = React.useState('');
 
-  const { toast } = useToast();
+  const { toast, dismiss } = useToast();
 
-  const handleAddItem = () => {
+  const handleAddItem = (e: React.FormEvent) => {
+    e.preventDefault();
     if (newItemText.trim()) {
       onAddItem(newItemText.trim());
       setNewItemText('');
-    }
-  };
-  
-  const handleInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      handleAddItem();
     }
   };
 
@@ -72,6 +71,8 @@ export default function ShoppingList({
       removalTimeouts.current.delete(itemId);
     }
     setRemovingItems(prev => prev.filter(id => id !== itemId));
+    onToggleItem(itemId); // Re-toggles the item to add it back
+    dismiss();
   };
 
   const handleToggleItem = (itemId: string) => {
@@ -134,7 +135,7 @@ export default function ShoppingList({
 
   const renderItemList = (list: Item[], isCompletedList = false) => (
     <div className="space-y-2">
-      {list.map((item, index) => {
+      {list.filter(item => !removingItems.includes(item.id)).map((item, index) => {
         const isRemoving = removingItems.includes(item.id);
         const originalIndex = items.findIndex(i => i.id === item.id);
         
@@ -155,7 +156,9 @@ export default function ShoppingList({
               'group'
             )}
           >
-            <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab active:cursor-grabbing" />
+            <div className="hidden md:block">
+              <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab active:cursor-grabbing" />
+            </div>
             <Checkbox
               id={`item-${item.id}`}
               checked={item.completed}
@@ -243,17 +246,16 @@ export default function ShoppingList({
 
       <Card>
         <CardContent className="p-4 md:p-6">
-          <div className="flex gap-2 mb-6">
+          <form onSubmit={handleAddItem} className="flex gap-2 mb-6">
             <Input
               value={newItemText}
               onChange={(e) => setNewItemText(e.target.value)}
-              onKeyDown={handleInputKeyDown}
               placeholder={listType === 'regular' ? "Add a regular item..." : "Add a one-off item..."}
             />
-            <Button onClick={handleAddItem} type="button" variant="secondary" className="bg-accent hover:bg-accent/90 text-accent-foreground">
+            <Button type="submit" variant="secondary" className="bg-accent hover:bg-accent/90 text-accent-foreground">
               <Plus className="h-4 w-4" />
             </Button>
-          </div>
+          </form>
           
           {activeItems.length === 0 && (listType === 'regular' || completedItems.length === 0) ? (
             <p className="text-center text-muted-foreground py-8">
@@ -264,11 +266,17 @@ export default function ShoppingList({
           )}
           
           {listType === 'regular' && completedItems.length > 0 && (
-            <>
-              <Separator className="my-6" />
-              <h3 className="text-sm font-medium text-muted-foreground mb-4">Completed ({completedItems.length})</h3>
-              {renderItemList(completedItems, true)}
-            </>
+            isMobile && viewMode === 'side-by-side' ? (
+              <div className="mt-6 p-4 text-center text-muted-foreground border border-dashed rounded-lg">
+                Completed items are hidden in this view.
+              </div>
+            ) : (
+              <>
+                <Separator className="my-6" />
+                <h3 className="text-sm font-medium text-muted-foreground mb-4">Completed ({completedItems.length})</h3>
+                {renderItemList(completedItems, true)}
+              </>
+            )
           )}
         </CardContent>
       </Card>

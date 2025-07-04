@@ -6,13 +6,14 @@ import { useRouter } from 'next/navigation';
 import { useShoppingLists } from '@/hooks/useShoppingLists';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import Header from '@/components/Header';
 import ShoppingList from '@/components/ShoppingList';
 import type { Item, Store } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { TabbedViewIcon, SideBySideViewIcon } from '@/components/Icons';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export default function ShoppingListClient({ storeId }: { storeId: string }) {
   const {
@@ -31,6 +32,7 @@ export default function ShoppingListClient({ storeId }: { storeId: string }) {
   
   const [store, setStore] = useState<Store | undefined>(undefined);
   const [viewMode, setViewMode] = useState<'tabs' | 'side-by-side'>('tabs');
+  const isMobile = useIsMobile();
   const router = useRouter();
 
   useEffect(() => {
@@ -91,6 +93,8 @@ export default function ShoppingListClient({ storeId }: { storeId: string }) {
     onRenameItem: (itemId: string, newText: string) => renameItem(store.id, listType, itemId, newText),
     onMoveItem: (itemId: string) => moveItem(store.id, itemId),
     onMoveItemOrder: (itemId: string, direction: 'up' | 'down') => moveItemOrder(store.id, itemId, direction),
+    isMobile,
+    viewMode
   });
 
   return (
@@ -110,7 +114,7 @@ export default function ShoppingListClient({ storeId }: { storeId: string }) {
                 {store.name}
                 </h1>
             </div>
-            <div className='flex items-center gap-2'>
+            <div className='flex items-center gap-1'>
                 <Button variant={viewMode === 'tabs' ? 'secondary' : 'ghost'} size="icon" onClick={() => setViewMode('tabs')}>
                     <TabbedViewIcon className="h-8 w-8" />
                     <span className="sr-only">Tabbed View</span>
