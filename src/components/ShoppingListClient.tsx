@@ -14,6 +14,7 @@ import { Skeleton } from './ui/skeleton';
 
 export default function ShoppingListClient({ storeId }: { storeId: string }) {
   const {
+    stores,
     getStore,
     addItem,
     toggleItem,
