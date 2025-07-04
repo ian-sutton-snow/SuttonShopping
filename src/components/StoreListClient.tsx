@@ -39,6 +39,7 @@ import Header from '@/components/Header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Store } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const IconPicker = ({
   allIcons,
@@ -51,7 +52,7 @@ const IconPicker = ({
   onSelect: (iconName: string) => void;
   iconComponents: { [key: string]: React.ComponentType<{ className?: string }> };
 }) => (
-  <div className="grid grid-cols-4 gap-4 pt-2">
+  <div className="grid grid-cols-4 gap-2 pt-1">
     {allIcons.map((iconName) => {
       const Icon = iconComponents[iconName];
       return (
@@ -60,12 +61,12 @@ const IconPicker = ({
           variant="outline"
           size="icon"
           className={cn(
-            "h-14 w-14",
+            "h-12 w-12",
             selectedIcon === iconName && "ring-2 ring-primary border-primary"
           )}
           onClick={() => onSelect(iconName)}
         >
-          <Icon className="h-7 w-7" />
+          <Icon className="h-6 w-6" />
         </Button>
       );
     })}
@@ -74,20 +75,17 @@ const IconPicker = ({
 
 export default function StoreListClient() {
   const { stores, addStore, editStore, deleteStore, reorderStores, moveStoreOrder, isLoaded, iconComponents, icons } = useShoppingLists();
+  const isMobile = useIsMobile();
   
-  // State for dialogs
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   
-  // State for the store being edited or deleted
   const [activeStore, setActiveStore] = React.useState<Store | null>(null);
 
-  // State for new/editing store form
   const [storeName, setStoreName] = React.useState('');
   const [storeIcon, setStoreIcon] = React.useState(icons[0]);
 
-  // Drag and drop refs
   const dragItem = React.useRef<number | null>(null);
   const dragOverItem = React.useRef<number | null>(null);
 
@@ -153,12 +151,12 @@ export default function StoreListClient() {
                         <Plus className="mr-2 h-4 w-4" /> Add Store
                     </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px]">
+                <DialogContent className="sm:max-w-[425px] p-4">
                     <DialogHeader>
                         <DialogTitle>Add a new store</DialogTitle>
                         <DialogDescription>Enter a name and choose an icon for your new shopping list.</DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-4 py-4">
+                    <div className="grid gap-2 py-2">
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="name" className="text-right">Name</Label>
                             <Input id="name" value={storeName} onChange={(e) => setStoreName(e.target.value)} className="col-span-3" autoFocus />
@@ -179,12 +177,12 @@ export default function StoreListClient() {
 
         {/* Edit Store Dialog */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-[425px] p-4">
                 <DialogHeader>
                     <DialogTitle>Edit store</DialogTitle>
                     <DialogDescription>Update the name and icon for this store.</DialogDescription>
                 </DialogHeader>
-                 <div className="grid gap-4 py-4">
+                 <div className="grid gap-2 py-2">
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="edit-name" className="text-right">Name</Label>
                         <Input id="edit-name" value={storeName} onChange={(e) => setStoreName(e.target.value)} className="col-span-3" autoFocus />
@@ -234,12 +232,12 @@ export default function StoreListClient() {
               return (
                  <div
                     key={store.id}
-                    draggable
+                    draggable={!isMobile}
                     onDragStart={() => (dragItem.current = index)}
                     onDragEnter={() => (dragOverItem.current = index)}
                     onDragEnd={handleDragSort}
                     onDragOver={(e) => e.preventDefault()}
-                    className="cursor-grab active:cursor-grabbing"
+                    className={cn(!isMobile && "cursor-grab active:cursor-grabbing")}
                   >
                   <Card className="shadow-lg transition-transform transform hover:-translate-y-1 h-full flex flex-col hover:border-primary relative">
                      <Link href={`/list/${store.id}`} className="focus:outline-none focus:ring-2 focus:ring-primary rounded-lg flex-grow flex flex-col">
@@ -253,9 +251,9 @@ export default function StoreListClient() {
                     </Link>
 
                     <div className="absolute top-2 right-2 flex items-center gap-1">
-                        <div className="hidden md:block">
+                        {!isMobile && (
                             <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab" />
-                        </div>
+                        )}
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="icon" className="h-8 w-8">

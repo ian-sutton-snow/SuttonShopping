@@ -51,20 +51,15 @@ export default function ShoppingList({
 
   const { toast, dismiss } = useToast();
   const isMobile = useIsMobile();
+  const [undoToastId, setUndoToastId] = React.useState<string | null>(null);
 
-  const handleAddItem = () => {
+  const handleAddItem = (e: React.FormEvent) => {
+    e.preventDefault();
     if (newItemText.trim()) {
       onAddItem(newItemText.trim());
       setNewItemText('');
     }
   };
-
-  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleAddItem();
-    }
-  }
 
   const handleUndoRemove = (itemId: string) => {
     const timeoutId = removalTimeouts.current.get(itemId);
@@ -73,14 +68,21 @@ export default function ShoppingList({
       removalTimeouts.current.delete(itemId);
     }
     setRemovingItems(prev => prev.filter(id => id !== itemId));
-    dismiss();
+    if (undoToastId) {
+      dismiss(undoToastId);
+      setUndoToastId(null);
+    }
   };
 
   const handleToggleItem = (itemId: string) => {
     if (listType === 'oneOff') {
       const itemToComplete = items.find(i => i.id === itemId);
       if (itemToComplete && !removingItems.includes(itemId)) {
-        toast({
+        if (undoToastId) {
+          dismiss(undoToastId);
+        }
+
+        const { id: newToastId } = toast({
             title: `"${itemToComplete.text}" removed.`,
             duration: 5000,
             action: (
@@ -92,6 +94,7 @@ export default function ShoppingList({
               </Button>
             ),
         });
+        setUndoToastId(newToastId);
 
         setRemovingItems(prev => [...prev, itemId]);
 
@@ -242,17 +245,16 @@ export default function ShoppingList({
 
       <Card>
         <CardContent className="p-4 md:p-6">
-          <div className="flex gap-2 mb-6">
+          <form onSubmit={handleAddItem} className="flex gap-2 mb-6">
             <Input
               value={newItemText}
               onChange={(e) => setNewItemText(e.target.value)}
-              onKeyDown={handleInputKeyDown}
               placeholder={listType === 'regular' ? "Add a regular item..." : "Add a one-off item..."}
             />
-            <Button onClick={handleAddItem} variant="secondary" className="bg-accent hover:bg-accent/90 text-accent-foreground">
+            <Button type="submit" variant="secondary" className="bg-accent hover:bg-accent/90 text-accent-foreground">
               <Plus className="h-4 w-4" />
             </Button>
-          </div>
+          </form>
           
           {activeItems.length === 0 && (listType === 'regular' || completedItems.length === 0) ? (
             <p className="text-center text-muted-foreground py-8">
