@@ -53,11 +53,17 @@ export default function ShoppingList({
   const isMobile = useIsMobile();
   const [undoToastId, setUndoToastId] = React.useState<string | null>(null);
 
-  const handleAddItem = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleAddItem = () => {
     if (newItemText.trim()) {
       onAddItem(newItemText.trim());
       setNewItemText('');
+    }
+  };
+
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddItem();
     }
   };
 
@@ -241,16 +247,17 @@ export default function ShoppingList({
 
       <Card>
         <CardContent className="p-4 md:p-6">
-          <form onSubmit={handleAddItem} className="flex gap-2 mb-6">
+          <div className="flex gap-2 mb-6">
             <Input
               value={newItemText}
               onChange={(e) => setNewItemText(e.target.value)}
+              onKeyDown={handleInputKeyDown}
               placeholder={listType === 'regular' ? "Add a regular item..." : "Add a one-off item..."}
             />
-            <Button type="submit" variant="secondary" className="bg-accent hover:bg-accent/90 text-accent-foreground">
+            <Button onClick={handleAddItem} variant="secondary" className="bg-accent hover:bg-accent/90 text-accent-foreground">
               <Plus className="h-4 w-4" />
             </Button>
-          </form>
+          </div>
           
           {activeItems.length === 0 && (listType === 'regular' || completedItems.length === 0) ? (
             <p className="text-center text-muted-foreground py-8">
