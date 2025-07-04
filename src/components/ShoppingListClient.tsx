@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useShoppingLists } from '@/hooks/useShoppingLists';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Loader2, SquareTabs, SplitSquareVertical } from 'lucide-react';
+import { ArrowLeft, Loader2, SplitSquareVertical, LayoutPanelTop as TabsIcon } from 'lucide-react';
 import Link from 'next/link';
 import Header from '@/components/Header';
 import ShoppingList from '@/components/ShoppingList';
@@ -108,7 +108,7 @@ export default function ShoppingListClient({ storeId }: { storeId: string }) {
             </div>
             <div className='flex items-center gap-2'>
                 <Button variant={viewMode === 'tabs' ? 'secondary' : 'ghost'} size="icon" onClick={() => setViewMode('tabs')}>
-                    <SquareTabs className="h-5 w-5" />
+                    <TabsIcon className="h-5 w-5" />
                     <span className="sr-only">Tabbed View</span>
                 </Button>
                 <Button variant={viewMode === 'side-by-side' ? 'secondary' : 'ghost'} size="icon" onClick={() => setViewMode('side-by-side')}>
