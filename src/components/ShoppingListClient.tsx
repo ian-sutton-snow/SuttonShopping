@@ -20,7 +20,6 @@ export default function ShoppingListClient({ storeId }: { storeId: string }) {
     stores,
     addItem,
     toggleItem,
-    reorderItems,
     deleteItem,
     renameItem,
     moveItem,
@@ -32,9 +31,7 @@ export default function ShoppingListClient({ storeId }: { storeId: string }) {
   
   const [viewMode, setViewMode] = useState<'tabs' | 'side-by-side'>('tabs');
   const isMobile = useIsMobile();
-  const router = useRouter();
 
-  // Derive the store directly from the stores list to avoid stale state
   const store = stores.find((s) => s.id === storeId);
 
   if (!isLoaded) {
@@ -56,7 +53,6 @@ export default function ShoppingListClient({ storeId }: { storeId: string }) {
     );
   }
 
-  // If loading is finished and we still don't have a store, it's not found.
   if (!store) {
     return (
       <div className="flex flex-col min-h-screen">
@@ -82,15 +78,10 @@ export default function ShoppingListClient({ storeId }: { storeId: string }) {
     items: store.lists[listType],
     onAddItem: (text: string) => addItem(store.id, listType, text),
     onToggleItem: (itemId: string, item: Item) => {
-      if (listType === 'oneOff') {
-        toggleItem(store.id, listType, itemId);
-        return item; // Return the item for the undo toast
-      }
       toggleItem(store.id, listType, itemId);
-      return null;
+      return listType === 'oneOff' ? item : null;
     },
     onRestoreItem: (item: Item) => restoreOneOffItem(store.id, item),
-    onReorder: (startIndex: number, endIndex: number) => reorderItems(store.id, listType, startIndex, endIndex),
     onDeleteItem: (itemId: string) => deleteItem(store.id, listType, itemId),
     onRenameItem: (itemId: string, newText: string) => renameItem(store.id, listType, itemId, newText),
     onMoveItem: (itemId: string) => moveItem(store.id, itemId),

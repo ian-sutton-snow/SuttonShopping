@@ -61,30 +61,27 @@ export default function ShoppingList({
   };
 
   const handleToggleItem = (itemId: string) => {
+    const itemToToggle = items.find(i => i.id === itemId);
+    if (!itemToToggle) return;
+
     if (listType === 'oneOff') {
-      const itemToComplete = items.find(i => i.id === itemId);
-      if (itemToComplete) {
-        // Optimistically remove the item from the UI
-        onToggleItem(itemId, itemToComplete);
-        
-        // Show a toast with an undo action
-        const { id: toastId } = toast({
-          title: `"${itemToComplete.text}" removed.`,
-          duration: 5000,
-          action: (
-            <Button variant="secondary" size="sm" onClick={(e) => {
-              e.preventDefault();
-              onRestoreItem(itemToComplete);
-              dismiss(toastId);
-            }}>
-              Undo
-            </Button>
-          ),
-        });
-      }
+      onToggleItem(itemId, itemToToggle);
+      
+      const { id: toastId } = toast({
+        title: `"${itemToToggle.text}" removed.`,
+        duration: 5000,
+        action: (
+          <Button variant="secondary" size="sm" onClick={(e) => {
+            e.preventDefault();
+            onRestoreItem(itemToToggle);
+            dismiss(toastId);
+          }}>
+            Undo
+          </Button>
+        ),
+      });
     } else {
-      const item = items.find(i => i.id === itemId)!;
-      onToggleItem(itemId, item);
+      onToggleItem(itemId, itemToToggle);
     }
   };
 

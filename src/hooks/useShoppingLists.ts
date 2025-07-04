@@ -55,6 +55,12 @@ export const useShoppingLists = () => {
     }
   }, [stores, isLoaded]);
 
+  const updateStore = useCallback((storeId: string, updateFn: (store: Store) => Store) => {
+    setStores(prevStores => 
+      prevStores.map(store => store.id === storeId ? updateFn(store) : store)
+    );
+  }, []);
+
   const addStore = useCallback((name: string, icon: string) => {
     setStores((prevStores) => {
       const newStore: Store = {
@@ -79,15 +85,6 @@ export const useShoppingLists = () => {
     setStores(prevStores => prevStores.filter(store => store.id !== storeId));
   }, []);
 
-  const reorderStores = useCallback((startIndex: number, endIndex: number) => {
-    setStores(prevStores => {
-      const result = Array.from(prevStores);
-      const [removed] = result.splice(startIndex, 1);
-      result.splice(endIndex, 0, removed);
-      return result;
-    });
-  }, []);
-
   const moveStoreOrder = useCallback((storeId: string, direction: 'up' | 'down') => {
     setStores(prevStores => {
       const storeIndex = prevStores.findIndex(s => s.id === storeId);
@@ -102,174 +99,146 @@ export const useShoppingLists = () => {
       return reorderedStores;
     });
   }, []);
-
-  const getStore = useCallback((storeId: string) => {
-    return stores.find((s) => s.id === storeId);
-  }, [stores]);
-
-  const updateStoreUnsafe = useCallback((storeId: string, updatedStoreData: Partial<Store>) => {
-    setStores((prevStores) =>
-      prevStores.map((store) =>
-        store.id === storeId ? { ...store, ...updatedStoreData } : store
-      )
-    );
-  }, []);
   
   const addItem = useCallback((storeId: string, listType: 'regular' | 'oneOff', text: string) => {
     const newItem: Item = { id: crypto.randomUUID(), text, completed: false };
-    const store = getStore(storeId);
-    if (store) {
-      const updatedLists = { ...store.lists };
-      updatedLists[listType] = [newItem, ...updatedLists[listType]];
-      updateStoreUnsafe(storeId, { lists: updatedLists });
-    }
-  }, [getStore, updateStoreUnsafe]);
+    updateStore(storeId, store => ({
+      ...store,
+      lists: {
+        ...store.lists,
+        [listType]: [newItem, ...store.lists[listType]],
+      }
+    }));
+  }, [updateStore]);
 
   const toggleItem = useCallback((storeId: string, listType: 'regular' | 'oneOff', itemId: string) => {
-    const store = getStore(storeId);
-    if (!store) return;
-
-    let updatedLists = { ...store.lists };
-    if (listType === 'oneOff') {
-      // Find the item being "completed"
-      const itemToComplete = updatedLists.oneOff.find((item) => item.id === itemId);
-      if (itemToComplete) {
-         // This now just filters it out, the undo logic is handled in the component
-        updatedLists.oneOff = updatedLists.oneOff.filter((item) => item.id !== itemId);
+    updateStore(storeId, store => {
+      const newLists = { ...store.lists };
+      if (listType === 'oneOff') {
+        newLists.oneOff = newLists.oneOff.filter(item => item.id !== itemId);
+      } else {
+        newLists.regular = newLists.regular.map(item =>
+          item.id === itemId ? { ...item, completed: !item.completed } : item
+        );
       }
-    } else {
-      updatedLists.regular = updatedLists.regular.map((item) =>
-        item.id === itemId ? { ...item, completed: !item.completed } : item
-      );
-    }
-    updateStoreUnsafe(storeId, { lists: updatedLists });
-  }, [getStore, updateStoreUnsafe]);
-  
-  const reorderItems = useCallback((storeId: string, listType: 'regular' | 'oneOff', startIndex: number, endIndex: number) => {
-    const store = getStore(storeId);
-    if (!store) return;
-
-    const list = [...store.lists[listType]];
-    const [removed] = list.splice(startIndex, 1);
-    list.splice(endIndex, 0, removed);
-
-    const updatedLists = { ...store.lists, [listType]: list };
-    updateStoreUnsafe(storeId, { lists: updatedLists });
-  }, [getStore, updateStoreUnsafe]);
-
-  const deleteItem = useCallback((storeId: string, listType: 'regular' | 'oneOff', itemId: string) => {
-    const store = getStore(storeId);
-    if (!store) return;
-
-    const list = store.lists[listType].filter(item => item.id !== itemId);
-    const updatedLists = { ...store.lists, [listType]: list };
-    updateStoreUnsafe(storeId, { lists: updatedLists });
-  }, [getStore, updateStoreUnsafe]);
-
-  const renameItem = useCallback((storeId: string, listType: 'regular' | 'oneOff', itemId: string, newText: string) => {
-    const store = getStore(storeId);
-    if (!store) return;
-
-    const list = store.lists[listType].map(item => 
-      item.id === itemId ? { ...item, text: newText } : item
-    );
-    const updatedLists = { ...store.lists, [listType]: list };
-    updateStoreUnsafe(storeId, { lists: updatedLists });
-  }, [getStore, updateStoreUnsafe]);
-
-  const moveItem = useCallback((storeId: string, itemId: string) => {
-     const store = getStore(storeId);
-     if (!store) return;
-
-     let itemToMove: Item | undefined;
-     let sourceList: 'regular' | 'oneOff' | null = null;
-     
-     if (store.lists.regular.some(i => i.id === itemId)) {
-       sourceList = 'regular';
-       itemToMove = store.lists.regular.find(i => i.id === itemId);
-     } else if (store.lists.oneOff.some(i => i.id === itemId)) {
-       sourceList = 'oneOff';
-       itemToMove = store.lists.oneOff.find(i => i.id === itemId);
-     }
-
-     if (!itemToMove || !sourceList) return;
-
-     const destinationList = sourceList === 'regular' ? 'oneOff' : 'regular';
-     
-     // When moving, always mark as incomplete
-     itemToMove = { ...itemToMove, completed: false };
-
-     const updatedSourceList = store.lists[sourceList].filter(i => i.id !== itemId);
-     const updatedDestinationList = [itemToMove, ...store.lists[destinationList]];
-     
-     const updatedLists = {
-       ...store.lists,
-       [sourceList]: updatedSourceList,
-       [destinationList]: updatedDestinationList,
-     };
-
-     updateStoreUnsafe(storeId, { lists: updatedLists });
-  }, [getStore, updateStoreUnsafe]);
-
-  const moveItemOrder = useCallback((storeId: string, itemId: string, direction: 'up' | 'down') => {
-    const store = getStore(storeId);
-    if (!store) return;
-
-    let listType: 'regular' | 'oneOff' | null = null;
-    let isCompleted = false;
-
-    // Find the item and its list
-    let regularItem = store.lists.regular.find(i => i.id === itemId);
-    if (regularItem) {
-        listType = 'regular';
-        isCompleted = regularItem.completed;
-    } else if (store.lists.oneOff.some(i => i.id === itemId)) {
-        listType = 'oneOff';
-    } else {
-        return; // Item not found
-    }
-
-    const listToReorder = listType === 'regular' 
-        ? (isCompleted ? store.lists.regular.filter(i => i.completed) : store.lists.regular.filter(i => !i.completed))
-        : store.lists.oneOff;
-    
-    const itemIndex = listToReorder.findIndex(i => i.id === itemId);
-
-    if (itemIndex === -1) return;
-
-    const newIndex = direction === 'up' ? itemIndex - 1 : itemIndex + 1;
-    if (newIndex < 0 || newIndex >= listToReorder.length) return; // Cannot move further
-
-    const reorderedSubList = [...listToReorder];
-    const [item] = reorderedSubList.splice(itemIndex, 1);
-    reorderedSubList.splice(newIndex, 0, item);
-    
-    let finalRegularList: Item[];
-    if (listType === 'regular') {
-      const otherHalf = isCompleted ? store.lists.regular.filter(i => !i.completed) : store.lists.regular.filter(i => i.completed);
-      finalRegularList = isCompleted ? [...otherHalf, ...reorderedSubList] : [...reorderedSubList, ...otherHalf];
-    } else {
-      finalRegularList = store.lists.regular;
-    }
-
-    const updatedLists = {
-        regular: listType === 'regular' ? finalRegularList : store.lists.regular,
-        oneOff: listType === 'oneOff' ? reorderedSubList : store.lists.oneOff,
-    };
-
-    updateStoreUnsafe(storeId, { lists: updatedLists });
-
-  }, [getStore, updateStoreUnsafe]);
+      return { ...store, lists: newLists };
+    });
+  }, [updateStore]);
 
   const restoreOneOffItem = useCallback((storeId: string, item: Item) => {
-    const store = getStore(storeId);
-    if (store) {
-      const updatedLists = { ...store.lists };
-      // This could be improved to restore to original position, but for now, add to top.
-      updatedLists.oneOff = [item, ...updatedLists.oneOff];
-      updateStoreUnsafe(storeId, { lists: updatedLists });
-    }
-  }, [getStore, updateStoreUnsafe]);
+    updateStore(storeId, store => {
+      const newLists = { ...store.lists };
+      newLists.oneOff = [item, ...newLists.oneOff];
+      return { ...store, lists: newLists };
+    });
+  }, [updateStore]);
+  
+  const deleteItem = useCallback((storeId: string, listType: 'regular' | 'oneOff', itemId: string) => {
+    updateStore(storeId, store => {
+      const list = store.lists[listType].filter(item => item.id !== itemId);
+      return {
+        ...store,
+        lists: {
+          ...store.lists,
+          [listType]: list,
+        }
+      };
+    });
+  }, [updateStore]);
 
-  return { stores, addStore, editStore, deleteStore, reorderStores, moveStoreOrder, getStore, addItem, toggleItem, reorderItems, deleteItem, renameItem, moveItem, moveItemOrder, isLoaded, iconComponents, icons, restoreOneOffItem };
+  const renameItem = useCallback((storeId: string, listType: 'regular' | 'oneOff', itemId: string, newText: string) => {
+    updateStore(storeId, store => {
+      const list = store.lists[listType].map(item => 
+        item.id === itemId ? { ...item, text: newText } : item
+      );
+      return {
+        ...store,
+        lists: {
+          ...store.lists,
+          [listType]: list,
+        }
+      };
+    });
+  }, [updateStore]);
+
+  const moveItem = useCallback((storeId: string, itemId: string) => {
+    updateStore(storeId, store => {
+      let itemToMove: Item | undefined;
+      let sourceList: 'regular' | 'oneOff' | null = null;
+      
+      if (store.lists.regular.some(i => i.id === itemId)) {
+        sourceList = 'regular';
+        itemToMove = store.lists.regular.find(i => i.id === itemId);
+      } else if (store.lists.oneOff.some(i => i.id === itemId)) {
+        sourceList = 'oneOff';
+        itemToMove = store.lists.oneOff.find(i => i.id === itemId);
+      }
+
+      if (!itemToMove || !sourceList) return store;
+
+      const destinationList = sourceList === 'regular' ? 'oneOff' : 'regular';
+      itemToMove = { ...itemToMove, completed: false };
+
+      const updatedSourceList = store.lists[sourceList].filter(i => i.id !== itemId);
+      const updatedDestinationList = [itemToMove, ...store.lists[destinationList]];
+      
+      return {
+        ...store,
+        lists: {
+          ...store.lists,
+          [sourceList]: updatedSourceList,
+          [destinationList]: updatedDestinationList,
+        }
+      };
+    });
+  }, [updateStore]);
+
+  const moveItemOrder = useCallback((storeId: string, itemId: string, direction: 'up' | 'down') => {
+    updateStore(storeId, store => {
+        let listType: 'regular' | 'oneOff' | null = null;
+        let isCompleted = false;
+
+        let regularItem = store.lists.regular.find(i => i.id === itemId);
+        if (regularItem) {
+            listType = 'regular';
+            isCompleted = regularItem.completed;
+        } else if (store.lists.oneOff.some(i => i.id === itemId)) {
+            listType = 'oneOff';
+        } else {
+            return store;
+        }
+
+        const listToReorder = listType === 'regular' 
+            ? (isCompleted ? store.lists.regular.filter(i => i.completed) : store.lists.regular.filter(i => !i.completed))
+            : store.lists.oneOff;
+        
+        const itemIndex = listToReorder.findIndex(i => i.id === itemId);
+        if (itemIndex === -1) return store;
+
+        const newIndex = direction === 'up' ? itemIndex - 1 : itemIndex + 1;
+        if (newIndex < 0 || newIndex >= listToReorder.length) return store;
+
+        const reorderedSubList = [...listToReorder];
+        const [item] = reorderedSubList.splice(itemIndex, 1);
+        reorderedSubList.splice(newIndex, 0, item);
+        
+        let finalRegularList: Item[];
+        if (listType === 'regular') {
+          const otherHalf = isCompleted ? store.lists.regular.filter(i => !i.completed) : store.lists.regular.filter(i => i.completed);
+          finalRegularList = isCompleted ? [...otherHalf, ...reorderedSubList] : [...reorderedSubList, ...otherHalf];
+        } else {
+          finalRegularList = store.lists.regular;
+        }
+
+        return {
+          ...store,
+          lists: {
+            regular: listType === 'regular' ? finalRegularList : store.lists.regular,
+            oneOff: listType === 'oneOff' ? reorderedSubList : store.lists.oneOff,
+          }
+        };
+    });
+  }, [updateStore]);
+
+  return { stores, addStore, editStore, deleteStore, moveStoreOrder, addItem, toggleItem, deleteItem, renameItem, moveItem, moveItemOrder, isLoaded, iconComponents, icons, restoreOneOffItem };
 };
