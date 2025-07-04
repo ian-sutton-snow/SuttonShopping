@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -20,7 +21,8 @@ interface ShoppingListProps {
   listType: 'regular' | 'oneOff';
   items: Item[];
   onAddItem: (text: string) => void;
-  onToggleItem: (itemId: string) => void;
+  onToggleItem: (itemId: string, item: Item) => Item | null;
+  onRestoreItem: (item: Item) => void;
   onDeleteItem: (itemId: string) => void;
   onRenameItem: (itemId: string, newText: string) => void;
   onMoveItem: (itemId: string) => void;
@@ -33,6 +35,7 @@ export default function ShoppingList({
   items,
   onAddItem,
   onToggleItem,
+  onRestoreItem,
   onDeleteItem,
   onRenameItem,
   onMoveItem,
@@ -40,9 +43,7 @@ export default function ShoppingList({
   viewMode = 'tabs',
 }: ShoppingListProps) {
   const [newItemText, setNewItemText] = React.useState('');
-  const [removingItems, setRemovingItems] = React.useState<string[]>([]);
-  const removalTimeouts = React.useRef(new Map<string, NodeJS.Timeout>());
-
+  
   const [isRenameDialogOpen, setIsRenameDialogOpen] = React.useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [activeItem, setActiveItem] = React.useState<Item | null>(null);
@@ -50,76 +51,40 @@ export default function ShoppingList({
 
   const { toast, dismiss } = useToast();
   const isMobile = useIsMobile();
-  const [undoToastId, setUndoToastId] = React.useState<string | null>(null);
   
-  const handleAddItem = () => {
+  const handleAddItem = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     if (newItemText.trim()) {
       onAddItem(newItemText.trim());
       setNewItemText('');
     }
   };
 
-  const handleInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      handleAddItem();
-    }
-  };
-
-  const handleUndoRemove = (itemId: string, toastToDismissId: string) => {
-    const timeoutId = removalTimeouts.current.get(itemId);
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-      removalTimeouts.current.delete(itemId);
-    }
-    setRemovingItems(prev => prev.filter(id => id !== itemId));
-    if (undoToastId === toastToDismissId) {
-        dismiss(toastToDismissId);
-        setUndoToastId(null);
-    }
-  };
-
   const handleToggleItem = (itemId: string) => {
     if (listType === 'oneOff') {
       const itemToComplete = items.find(i => i.id === itemId);
-      if (itemToComplete && !removingItems.includes(itemId)) {
-        if (undoToastId) {
-          dismiss(undoToastId);
-        }
-
-        const newToastId = toast({
-            title: `"${itemToComplete.text}" removed.`,
-            duration: 5000,
-            action: (
-              <Button variant="secondary" size="sm" onClick={(e) => {
-                e.preventDefault();
-                handleUndoRemove(itemId, newToastId.id);
-              }}>
-                Undo
-              </Button>
-            ),
-        }).id;
-        setUndoToastId(newToastId);
-
-        setRemovingItems(prev => [...prev, itemId]);
-
-        const timeoutId = setTimeout(() => {
-          onToggleItem(itemId);
-          setRemovingItems(prev => {
-            const newRemoving = prev.filter(id => id !== itemId);
-            if (newRemoving.length === 0) {
-              removalTimeouts.current.delete(itemId);
-            }
-            return newRemoving;
-          });
-          if (undoToastId === newToastId) {
-             setUndoToastId(null);
-          }
-        }, 5000);
-        removalTimeouts.current.set(itemId, timeoutId);
+      if (itemToComplete) {
+        // Optimistically remove the item from the UI
+        onToggleItem(itemId, itemToComplete);
+        
+        // Show a toast with an undo action
+        const { id: toastId } = toast({
+          title: `"${itemToComplete.text}" removed.`,
+          duration: 5000,
+          action: (
+            <Button variant="secondary" size="sm" onClick={(e) => {
+              e.preventDefault();
+              onRestoreItem(itemToComplete);
+              dismiss(toastId);
+            }}>
+              Undo
+            </Button>
+          ),
+        });
       }
     } else {
-      onToggleItem(itemId);
+      const item = items.find(i => i.id === itemId)!;
+      onToggleItem(itemId, item);
     }
   };
 
@@ -155,7 +120,7 @@ export default function ShoppingList({
 
   const renderItemList = (list: Item[], isCompletedList = false) => (
     <div className="space-y-2">
-      {list.filter(item => !removingItems.includes(item.id)).map((item, index) => {
+      {list.map((item, index) => {
         const canMoveUp = index > 0;
         const canMoveDown = index < list.length - 1;
 
@@ -251,17 +216,16 @@ export default function ShoppingList({
 
       <Card>
         <CardContent className="p-4 md:p-6">
-          <div className="flex gap-2 mb-6">
+          <form onSubmit={handleAddItem} className="flex gap-2 mb-6">
             <Input
               value={newItemText}
               onChange={(e) => setNewItemText(e.target.value)}
-              onKeyDown={handleInputKeyDown}
               placeholder={listType === 'regular' ? "Add a regular item..." : "Add a one-off item..."}
             />
-            <Button onClick={handleAddItem} type="button" variant="secondary" className="bg-accent hover:bg-accent/90 text-accent-foreground">
+            <Button type="submit" variant="secondary" className="bg-accent hover:bg-accent/90 text-accent-foreground">
               <Plus className="h-4 w-4" />
             </Button>
-          </div>
+          </form>
           
           {activeItems.length === 0 && (listType === 'regular' || completedItems.length === 0) ? (
             <p className="text-center text-muted-foreground py-8">

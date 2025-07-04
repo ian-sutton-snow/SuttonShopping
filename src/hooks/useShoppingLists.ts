@@ -131,7 +131,12 @@ export const useShoppingLists = () => {
 
     let updatedLists = { ...store.lists };
     if (listType === 'oneOff') {
-      updatedLists.oneOff = updatedLists.oneOff.filter((item) => item.id !== itemId);
+      // Find the item being "completed"
+      const itemToComplete = updatedLists.oneOff.find((item) => item.id === itemId);
+      if (itemToComplete) {
+         // This now just filters it out, the undo logic is handled in the component
+        updatedLists.oneOff = updatedLists.oneOff.filter((item) => item.id !== itemId);
+      }
     } else {
       updatedLists.regular = updatedLists.regular.map((item) =>
         item.id === itemId ? { ...item, completed: !item.completed } : item
@@ -256,5 +261,15 @@ export const useShoppingLists = () => {
 
   }, [getStore, updateStoreUnsafe]);
 
-  return { stores, addStore, editStore, deleteStore, reorderStores, moveStoreOrder, getStore, addItem, toggleItem, reorderItems, deleteItem, renameItem, moveItem, moveItemOrder, isLoaded, iconComponents, icons };
+  const restoreOneOffItem = useCallback((storeId: string, item: Item) => {
+    const store = getStore(storeId);
+    if (store) {
+      const updatedLists = { ...store.lists };
+      // This could be improved to restore to original position, but for now, add to top.
+      updatedLists.oneOff = [item, ...updatedLists.oneOff];
+      updateStoreUnsafe(storeId, { lists: updatedLists });
+    }
+  }, [getStore, updateStoreUnsafe]);
+
+  return { stores, addStore, editStore, deleteStore, reorderStores, moveStoreOrder, getStore, addItem, toggleItem, reorderItems, deleteItem, renameItem, moveItem, moveItemOrder, isLoaded, iconComponents, icons, restoreOneOffItem };
 };

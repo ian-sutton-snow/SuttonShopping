@@ -28,6 +28,7 @@ export default function ShoppingListClient({ storeId }: { storeId: string }) {
     moveItemOrder,
     isLoaded,
     iconComponents,
+    restoreOneOffItem,
   } = useShoppingLists();
   
   const [store, setStore] = useState<Store | undefined>(undefined);
@@ -87,7 +88,15 @@ export default function ShoppingListClient({ storeId }: { storeId: string }) {
     listType,
     items: store.lists[listType],
     onAddItem: (text: string) => addItem(store.id, listType, text),
-    onToggleItem: (itemId: string) => toggleItem(store.id, listType, itemId),
+    onToggleItem: (itemId: string, item: Item) => {
+      if (listType === 'oneOff') {
+        toggleItem(store.id, listType, itemId);
+        return item; // Return the item for the undo toast
+      }
+      toggleItem(store.id, listType, itemId);
+      return null;
+    },
+    onRestoreItem: (item: Item) => restoreOneOffItem(store.id, item),
     onReorder: (startIndex: number, endIndex: number) => reorderItems(store.id, listType, startIndex, endIndex),
     onDeleteItem: (itemId: string) => deleteItem(store.id, listType, itemId),
     onRenameItem: (itemId: string, newText: string) => renameItem(store.id, listType, itemId, newText),
