@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useShoppingLists } from '@/hooks/useShoppingLists';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2, LayoutGrid, Rows3 } from 'lucide-react';
 import Link from 'next/link';
 import Header from '@/components/Header';
 import ShoppingList from '@/components/ShoppingList';
@@ -13,8 +13,20 @@ import type { Store } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 
 export default function ShoppingListClient({ storeId }: { storeId: string }) {
-  const { getStore, addItem, toggleItem, reorderItems, isLoaded, iconComponents } = useShoppingLists();
+  const {
+    getStore,
+    addItem,
+    toggleItem,
+    reorderItems,
+    deleteItem,
+    renameItem,
+    moveItem,
+    isLoaded,
+    iconComponents,
+  } = useShoppingLists();
+  
   const [store, setStore] = useState<Store | undefined>(undefined);
+  const [viewMode, setViewMode] = useState<'tabs' | 'side-by-side'>('tabs');
   const router = useRouter();
 
   useEffect(() => {
@@ -22,12 +34,9 @@ export default function ShoppingListClient({ storeId }: { storeId: string }) {
       const currentStore = getStore(storeId);
       if (currentStore) {
         setStore(currentStore);
-      } else {
-        // Redirect if store not found, maybe after a delay or check
-        // For now, we'll just show not found
       }
     }
-  }, [storeId, isLoaded, getStore]);
+  }, [storeId, isLoaded, getStore, stores]);
 
   if (!isLoaded) {
     return (
@@ -68,6 +77,17 @@ export default function ShoppingListClient({ storeId }: { storeId: string }) {
 
   const Icon = iconComponents[store.icon];
 
+  const shoppingListProps = (listType: 'regular' | 'oneOff') => ({
+    listType,
+    items: store.lists[listType],
+    onAddItem: (text: string) => addItem(store.id, listType, text),
+    onToggleItem: (itemId: string) => toggleItem(store.id, listType, itemId),
+    onReorder: (startIndex: number, endIndex: number) => reorderItems(store.id, listType, startIndex, endIndex),
+    onDeleteItem: (itemId: string) => deleteItem(store.id, listType, itemId),
+    onRenameItem: (itemId: string, newText: string) => renameItem(store.id, listType, itemId, newText),
+    onMoveItem: (itemId: string) => moveItem(store.id, itemId),
+  });
+
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
@@ -85,32 +105,43 @@ export default function ShoppingListClient({ storeId }: { storeId: string }) {
                 {store.name}
                 </h1>
             </div>
+            <div className='flex items-center gap-2'>
+                <Button variant={viewMode === 'tabs' ? 'secondary' : 'ghost'} size="icon" onClick={() => setViewMode('tabs')}>
+                    <Rows3 className="h-5 w-5" />
+                    <span className="sr-only">Tabbed View</span>
+                </Button>
+                <Button variant={viewMode === 'side-by-side' ? 'secondary' : 'ghost'} size="icon" onClick={() => setViewMode('side-by-side')}>
+                    <LayoutGrid className="h-5 w-5" />
+                    <span className="sr-only">Side-by-side View</span>
+                </Button>
+            </div>
         </div>
         
-        <Tabs defaultValue="regular" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 md:w-96">
-            <TabsTrigger value="regular">Regular Items</TabsTrigger>
-            <TabsTrigger value="oneOff">One-Off Items</TabsTrigger>
-          </TabsList>
-          <TabsContent value="regular">
-            <ShoppingList
-              listType="regular"
-              items={store.lists.regular}
-              onAddItem={(text) => addItem(store.id, 'regular', text)}
-              onToggleItem={(itemId) => toggleItem(store.id, 'regular', itemId)}
-              onReorder={(startIndex, endIndex) => reorderItems(store.id, 'regular', startIndex, endIndex)}
-            />
-          </TabsContent>
-          <TabsContent value="oneOff">
-            <ShoppingList
-              listType="oneOff"
-              items={store.lists.oneOff}
-              onAddItem={(text) => addItem(store.id, 'oneOff', text)}
-              onToggleItem={(itemId) => toggleItem(store.id, 'oneOff', itemId)}
-              onReorder={(startIndex, endIndex) => reorderItems(store.id, 'oneOff', startIndex, endIndex)}
-            />
-          </TabsContent>
-        </Tabs>
+        {viewMode === 'tabs' ? (
+            <Tabs defaultValue="regular" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 md:w-96">
+                <TabsTrigger value="regular">Regular Items</TabsTrigger>
+                <TabsTrigger value="oneOff">One-Off Items</TabsTrigger>
+            </TabsList>
+            <TabsContent value="regular">
+                <ShoppingList {...shoppingListProps('regular')} />
+            </TabsContent>
+            <TabsContent value="oneOff">
+                <ShoppingList {...shoppingListProps('oneOff')} />
+            </TabsContent>
+            </Tabs>
+        ) : (
+            <div className="grid md:grid-cols-2 gap-8 items-start">
+                <div>
+                    <h2 className="text-xl font-bold font-headline mb-4">Regular Items</h2>
+                    <ShoppingList {...shoppingListProps('regular')} />
+                </div>
+                <div>
+                    <h2 className="text-xl font-bold font-headline mb-4">One-Off Items</h2>
+                    <ShoppingList {...shoppingListProps('oneOff')} />
+                </div>
+            </div>
+        )}
       </main>
     </div>
   );

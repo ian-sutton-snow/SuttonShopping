@@ -3,11 +3,11 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import type { Store, Item } from '@/lib/types';
-import { Home, ShoppingBasket, ShoppingCart, Store as StoreIcon, Car, Sprout, Shirt, Dumbbell } from 'lucide-react';
+import { Home, ShoppingBasket, ShoppingCart, Store as StoreIcon, Car, Sprout, Shirt, Dumbbell, Wine, Bike, Gift, BookOpen, Dog } from 'lucide-react';
 
 const STORE_KEY = 'shopsphere-stores';
 
-export const icons = ['ShoppingCart', 'Store', 'Home', 'ShoppingBasket', 'Car', 'Sprout', 'Shirt', 'Dumbbell'];
+export const icons = ['ShoppingCart', 'Store', 'Home', 'ShoppingBasket', 'Car', 'Sprout', 'Shirt', 'Dumbbell', 'Wine', 'Bike', 'Gift', 'BookOpen', 'Dog'];
 export const iconComponents: { [key: string]: React.ComponentType<{ className?: string }> } = {
   ShoppingCart,
   Store: StoreIcon,
@@ -17,6 +17,11 @@ export const iconComponents: { [key: string]: React.ComponentType<{ className?: 
   Sprout,
   Shirt,
   Dumbbell,
+  Wine,
+  Bike,
+  Gift,
+  BookOpen,
+  Dog,
 };
 
 const getInitialStores = (): Store[] => {
@@ -33,19 +38,15 @@ const getInitialStores = (): Store[] => {
 };
 
 export const useShoppingLists = () => {
-  const [stores, setStores] = useState<Store[]>(getInitialStores);
+  const [stores, setStores] = useState<Store[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    // On initial mount, read from localStorage
-    if (!isLoaded) {
-      setStores(getInitialStores());
-      setIsLoaded(true);
-    }
-  }, [isLoaded]);
+    setStores(getInitialStores());
+    setIsLoaded(true);
+  }, []);
 
   useEffect(() => {
-    // Persist to localStorage whenever stores change
     if (isLoaded) {
       try {
         window.localStorage.setItem(STORE_KEY, JSON.stringify(stores));
@@ -92,19 +93,21 @@ export const useShoppingLists = () => {
     return stores.find((s) => s.id === storeId);
   }, [stores]);
 
-  const updateStoreUnsafe = useCallback((updatedStore: Store) => {
+  const updateStoreUnsafe = useCallback((storeId: string, updatedStoreData: Partial<Store>) => {
     setStores((prevStores) =>
-      prevStores.map((store) => (store.id === updatedStore.id ? updatedStore : store))
+      prevStores.map((store) =>
+        store.id === storeId ? { ...store, ...updatedStoreData } : store
+      )
     );
   }, []);
-
+  
   const addItem = useCallback((storeId: string, listType: 'regular' | 'oneOff', text: string) => {
     const newItem: Item = { id: crypto.randomUUID(), text, completed: false };
     const store = getStore(storeId);
     if (store) {
       const updatedLists = { ...store.lists };
       updatedLists[listType] = [newItem, ...updatedLists[listType]];
-      updateStoreUnsafe({ ...store, lists: updatedLists });
+      updateStoreUnsafe(storeId, { lists: updatedLists });
     }
   }, [getStore, updateStoreUnsafe]);
 
@@ -120,7 +123,7 @@ export const useShoppingLists = () => {
         item.id === itemId ? { ...item, completed: !item.completed } : item
       );
     }
-    updateStoreUnsafe({ ...store, lists: updatedLists });
+    updateStoreUnsafe(storeId, { lists: updatedLists });
   }, [getStore, updateStoreUnsafe]);
 
   const reorderItems = useCallback((storeId: string, listType: 'regular' | 'oneOff', startIndex: number, endIndex: number) => {
@@ -132,8 +135,59 @@ export const useShoppingLists = () => {
     list.splice(endIndex, 0, removed);
 
     const updatedLists = { ...store.lists, [listType]: list };
-    updateStoreUnsafe({ ...store, lists: updatedLists });
+    updateStoreUnsafe(storeId, { lists: updatedLists });
   }, [getStore, updateStoreUnsafe]);
 
-  return { stores, addStore, editStore, deleteStore, reorderStores, getStore, addItem, toggleItem, reorderItems, isLoaded, iconComponents, icons };
+  const deleteItem = useCallback((storeId: string, listType: 'regular' | 'oneOff', itemId: string) => {
+    const store = getStore(storeId);
+    if (!store) return;
+
+    const list = store.lists[listType].filter(item => item.id !== itemId);
+    const updatedLists = { ...store.lists, [listType]: list };
+    updateStoreUnsafe(storeId, { lists: updatedLists });
+  }, [getStore, updateStoreUnsafe]);
+
+  const renameItem = useCallback((storeId: string, listType: 'regular' | 'oneOff', itemId: string, newText: string) => {
+    const store = getStore(storeId);
+    if (!store) return;
+
+    const list = store.lists[listType].map(item => 
+      item.id === itemId ? { ...item, text: newText } : item
+    );
+    const updatedLists = { ...store.lists, [listType]: list };
+    updateStoreUnsafe(storeId, { lists: updatedLists });
+  }, [getStore, updateStoreUnsafe]);
+
+  const moveItem = useCallback((storeId: string, itemId: string) => {
+     const store = getStore(storeId);
+     if (!store) return;
+
+     let itemToMove: Item | undefined;
+     let sourceList: 'regular' | 'oneOff' | null = null;
+     
+     if (store.lists.regular.some(i => i.id === itemId)) {
+       sourceList = 'regular';
+       itemToMove = store.lists.regular.find(i => i.id === itemId);
+     } else if (store.lists.oneOff.some(i => i.id === itemId)) {
+       sourceList = 'oneOff';
+       itemToMove = store.lists.oneOff.find(i => i.id === itemId);
+     }
+
+     if (!itemToMove || !sourceList) return;
+
+     const destinationList = sourceList === 'regular' ? 'oneOff' : 'regular';
+     
+     const updatedSourceList = store.lists[sourceList].filter(i => i.id !== itemId);
+     const updatedDestinationList = [itemToMove, ...store.lists[destinationList]];
+     
+     const updatedLists = {
+       ...store.lists,
+       [sourceList]: updatedSourceList,
+       [destinationList]: updatedDestinationList,
+     };
+
+     updateStoreUnsafe(storeId, { lists: updatedLists });
+  }, [getStore, updateStoreUnsafe]);
+
+  return { stores, addStore, editStore, deleteStore, reorderStores, getStore, addItem, toggleItem, reorderItems, deleteItem, renameItem, moveItem, isLoaded, iconComponents, icons };
 };
