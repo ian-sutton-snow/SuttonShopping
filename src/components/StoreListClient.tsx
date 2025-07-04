@@ -50,7 +50,7 @@ const IconPicker = ({
   onSelect: (iconName: string) => void;
   iconComponents: { [key: string]: React.ComponentType<{ className?: string }> };
 }) => (
-  <div className="grid grid-cols-6 gap-4 pt-2">
+  <div className="grid grid-cols-4 gap-6 pt-2">
     {allIcons.map((iconName) => {
       const Icon = iconComponents[iconName];
       return (

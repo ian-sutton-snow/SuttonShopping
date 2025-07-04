@@ -3,16 +3,15 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import type { Store, Item } from '@/lib/types';
-import { Home, ShoppingBasket, ShoppingCart, Store as StoreIcon, Car, Sprout, Shirt, Dumbbell, Wine, Bike, Gift, BookOpen, Check } from 'lucide-react';
+import { Home, ShoppingCart, Store as StoreIcon, Car, Sprout, Shirt, Dumbbell, Wine, Bike, Gift, BookOpen, Check } from 'lucide-react';
 
 const STORE_KEY = 'shopsphere-stores';
 
-export const icons = ['ShoppingCart', 'Store', 'Home', 'ShoppingBasket', 'Car', 'Sprout', 'Shirt', 'Dumbbell', 'Wine', 'Bike', 'Gift', 'BookOpen', 'Check'];
+export const icons = ['ShoppingCart', 'Store', 'Home', 'Car', 'Sprout', 'Shirt', 'Dumbbell', 'Wine', 'Bike', 'Gift', 'BookOpen', 'Check'];
 export const iconComponents: { [key: string]: React.ComponentType<{ className?: string }> } = {
   ShoppingCart,
   Store: StoreIcon,
   Home,
-  ShoppingBasket,
   Car,
   Sprout,
   Shirt,

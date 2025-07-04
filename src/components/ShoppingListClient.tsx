@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -5,12 +6,13 @@ import { useRouter } from 'next/navigation';
 import { useShoppingLists } from '@/hooks/useShoppingLists';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Loader2, SplitSquareVertical, LayoutPanelTop as TabsIcon } from 'lucide-react';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import Header from '@/components/Header';
 import ShoppingList from '@/components/ShoppingList';
 import type { Store } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
+import { TabbedViewIcon, SideBySideViewIcon } from '@/components/Icons';
 
 export default function ShoppingListClient({ storeId }: { storeId: string }) {
   const {
@@ -108,11 +110,11 @@ export default function ShoppingListClient({ storeId }: { storeId: string }) {
             </div>
             <div className='flex items-center gap-2'>
                 <Button variant={viewMode === 'tabs' ? 'secondary' : 'ghost'} size="icon" onClick={() => setViewMode('tabs')}>
-                    <TabsIcon className="h-5 w-5" />
+                    <TabbedViewIcon className="h-5 w-5" />
                     <span className="sr-only">Tabbed View</span>
                 </Button>
                 <Button variant={viewMode === 'side-by-side' ? 'secondary' : 'ghost'} size="icon" onClick={() => setViewMode('side-by-side')}>
-                    <SplitSquareVertical className="h-5 w-5" />
+                    <SideBySideViewIcon className="h-5 w-5" />
                     <span className="sr-only">Side-by-side View</span>
                 </Button>
             </div>
