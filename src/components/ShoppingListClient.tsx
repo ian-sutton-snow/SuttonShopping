@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useShoppingLists } from '@/hooks/useShoppingLists';
 import { Button } from '@/components/ui/button';
@@ -18,7 +18,6 @@ import { useIsMobile } from '@/hooks/use-mobile';
 export default function ShoppingListClient({ storeId }: { storeId: string }) {
   const {
     stores,
-    getStore,
     addItem,
     toggleItem,
     reorderItems,
@@ -31,19 +30,12 @@ export default function ShoppingListClient({ storeId }: { storeId: string }) {
     restoreOneOffItem,
   } = useShoppingLists();
   
-  const [store, setStore] = useState<Store | undefined>(undefined);
   const [viewMode, setViewMode] = useState<'tabs' | 'side-by-side'>('tabs');
   const isMobile = useIsMobile();
   const router = useRouter();
 
-  useEffect(() => {
-    if (isLoaded) {
-      const currentStore = getStore(storeId);
-      if (currentStore) {
-        setStore(currentStore);
-      }
-    }
-  }, [storeId, isLoaded, getStore, stores]);
+  // Derive the store directly from the stores list to avoid stale state
+  const store = stores.find((s) => s.id === storeId);
 
   if (!isLoaded) {
     return (
@@ -64,6 +56,7 @@ export default function ShoppingListClient({ storeId }: { storeId: string }) {
     );
   }
 
+  // If loading is finished and we still don't have a store, it's not found.
   if (!store) {
     return (
       <div className="flex flex-col min-h-screen">
@@ -102,7 +95,6 @@ export default function ShoppingListClient({ storeId }: { storeId: string }) {
     onRenameItem: (itemId: string, newText: string) => renameItem(store.id, listType, itemId, newText),
     onMoveItem: (itemId: string) => moveItem(store.id, itemId),
     onMoveItemOrder: (itemId: string, direction: 'up' | 'down') => moveItemOrder(store.id, itemId, direction),
-    isMobile,
     viewMode
   });
 
