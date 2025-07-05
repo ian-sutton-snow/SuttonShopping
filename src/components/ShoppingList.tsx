@@ -41,7 +41,7 @@ export default function ShoppingList({
   onMoveItemOrder,
   viewMode = 'tabs',
 }: ShoppingListProps) {
-  const [newItemText, setNewItemText] = React.useState('');
+  const inputRef = React.useRef<HTMLInputElement>(null);
   const [isRenameDialogOpen, setIsRenameDialogOpen] = React.useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [activeItem, setActiveItem] = React.useState<Item | null>(null);
@@ -49,17 +49,18 @@ export default function ShoppingList({
 
   const { toast, dismiss } = useToast();
   const isMobile = useIsMobile();
-
-  console.log(`[LOG RENDER] ShoppingList rendered for list type "${listType}". newItemText is: "${newItemText}"`);
   
-  const handleAddItem = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  console.log(`[LOG RENDER] ShoppingList rendered for list type "${listType}".`);
+
+  const handleAddItem = () => {
     console.log('[LOG 1] ShoppingList: handleAddItem triggered.');
-    const text = newItemText.trim();
+    const text = inputRef.current?.value.trim();
     if (text) {
       console.log(`[LOG 2 SUCCESS] ShoppingList: Text found: "${text}"`);
       onAddItem(text);
-      setNewItemText('');
+      if (inputRef.current) {
+        inputRef.current.value = '';
+      }
     } else {
       console.log('[LOG 2 FAILED] ShoppingList: Text was empty.');
     }
@@ -216,20 +217,22 @@ export default function ShoppingList({
 
       <Card>
         <CardContent className="p-4 md:p-6">
-          <form onSubmit={handleAddItem} className="flex gap-2 mb-6">
+          <div className="flex gap-2 mb-6">
             <Input
+              ref={inputRef}
               name="newItemText"
               placeholder={listType === 'regular' ? "Add a regular item..." : "Add a one-off item..."}
-              value={newItemText}
-              onChange={(e) => {
-                  console.log(`[LOG INPUT] Input onChange detected for list "${listType}". New value: "${e.target.value}"`);
-                  setNewItemText(e.target.value);
+              onKeyDown={(e) => {
+                if(e.key === 'Enter') {
+                  e.preventDefault();
+                  handleAddItem();
+                }
               }}
             />
-            <Button type="submit" variant="secondary" className="bg-accent hover:bg-accent/90 text-accent-foreground">
+            <Button type="button" onClick={handleAddItem} variant="secondary" className="bg-accent hover:bg-accent/90 text-accent-foreground">
               <Plus className="h-4 w-4" />
             </Button>
-          </form>
+          </div>
           
           {activeItems.length === 0 && (listType === 'regular' || completedItems.length === 0) ? (
             <p className="text-center text-muted-foreground py-8">
