@@ -76,7 +76,7 @@ const IconPicker = ({
 
 export default function StoreListClient() {
   const { user, signInWithGoogle, isAuthLoaded } = useAuth();
-  const { stores, addStore, editStore, deleteStore, reorderStores, moveStoreOrder, isLoaded, iconComponents, icons } = useShoppingLists(user?.uid);
+  const { stores, addStore, editStore, deleteStore, reorderStores, moveStoreOrder, isLoaded, iconComponents, icons } = useShoppingLists();
   const isMobile = useIsMobile();
   
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
@@ -142,7 +142,7 @@ export default function StoreListClient() {
   };
 
   const renderContent = () => {
-    if (!isAuthLoaded || (user && !isLoaded)) {
+    if (!isLoaded) {
        return (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {[...Array(4)].map((_, i) => (
@@ -150,21 +150,6 @@ export default function StoreListClient() {
             ))}
           </div>
         );
-    }
-
-    if (!user) {
-      return (
-         <div className="text-center py-20 bg-card rounded-lg shadow-sm border border-dashed">
-            <div className="flex justify-center mb-4">
-                <ShoppingBasket className="h-16 w-16 text-muted-foreground" />
-            </div>
-            <h2 className="text-2xl font-semibold text-gray-700">Welcome to ShopSphere</h2>
-            <p className="text-muted-foreground mt-2 mb-6">Sign in to manage and sync your shopping lists across devices.</p>
-            <Button onClick={signInWithGoogle}>
-              <LogIn className="mr-2 h-4 w-4" /> Sign In with Google
-            </Button>
-          </div>
-      );
     }
 
     if (stores.length > 0) {
@@ -255,7 +240,7 @@ export default function StoreListClient() {
           <h1 className="text-3xl font-bold font-headline text-gray-800">My Stores</h1>
             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                 <DialogTrigger asChild>
-                    <Button onClick={openAddDialog} disabled={!user}>
+                    <Button onClick={openAddDialog}>
                         <Plus className="mr-2 h-4 w-4" /> Add Store
                     </Button>
                 </DialogTrigger>

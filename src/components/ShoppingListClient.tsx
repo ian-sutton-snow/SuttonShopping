@@ -29,7 +29,7 @@ export default function ShoppingListClient({ storeId }: { storeId: string }) {
     isLoaded,
     iconComponents,
     restoreOneOffItem,
-  } = useShoppingLists(user?.uid);
+  } = useShoppingLists();
   
   const [viewMode, setViewMode] = useState<'tabs' | 'side-by-side'>('tabs');
   const isMobile = useIsMobile();

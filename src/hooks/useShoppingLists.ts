@@ -21,11 +21,13 @@ export const iconComponents: { [key: string]: React.ComponentType<{ className?: 
   Check,
 };
 
-const getInitialStores = (userId: string | null): Store[] => {
-  if (typeof window === 'undefined' || !userId) {
+// We use a static key for local storage now, since we don't have a real userId.
+const STORE_KEY = `shopsphere-stores-local`;
+
+const getInitialStores = (): Store[] => {
+  if (typeof window === 'undefined') {
     return [];
   }
-  const STORE_KEY = `shopsphere-stores-${userId}`;
   try {
     const item = window.localStorage.getItem(STORE_KEY);
     return item ? JSON.parse(item) : [];
@@ -35,29 +37,24 @@ const getInitialStores = (userId: string | null): Store[] => {
   }
 };
 
-export const useShoppingLists = (userId?: string | null) => {
+export const useShoppingLists = () => {
   const [stores, setStores] = useState<Store[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    if (userId) {
-      setStores(getInitialStores(userId));
-    } else {
-      setStores([]);
-    }
+    setStores(getInitialStores());
     setIsLoaded(true);
-  }, [userId]);
+  }, []);
 
   useEffect(() => {
-    if (isLoaded && userId) {
-      const STORE_KEY = `shopsphere-stores-${userId}`;
+    if (isLoaded) {
       try {
         window.localStorage.setItem(STORE_KEY, JSON.stringify(stores));
       } catch (error) {
         console.error('Failed to save stores to localStorage:', error);
       }
     }
-  }, [stores, isLoaded, userId]);
+  }, [stores, isLoaded]);
 
   const updateStore = useCallback((storeId: string, updateFn: (store: Store) => Store) => {
     setStores(prevStores => prevStores.map(store => store.id === storeId ? updateFn(store) : store));
