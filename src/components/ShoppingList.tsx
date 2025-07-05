@@ -49,13 +49,19 @@ export default function ShoppingList({
 
   const { toast, dismiss } = useToast();
   const isMobile = useIsMobile();
+
+  console.log(`[LOG RENDER] ShoppingList rendered for list type "${listType}". newItemText is: "${newItemText}"`);
   
   const handleAddItem = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    console.log('[LOG 1] ShoppingList: handleAddItem triggered.');
     const text = newItemText.trim();
     if (text) {
+      console.log(`[LOG 2 SUCCESS] ShoppingList: Text found: "${text}"`);
       onAddItem(text);
       setNewItemText('');
+    } else {
+      console.log('[LOG 2 FAILED] ShoppingList: Text was empty.');
     }
   };
 
@@ -215,7 +221,10 @@ export default function ShoppingList({
               name="newItemText"
               placeholder={listType === 'regular' ? "Add a regular item..." : "Add a one-off item..."}
               value={newItemText}
-              onChange={(e) => setNewItemText(e.target.value)}
+              onChange={(e) => {
+                  console.log(`[LOG INPUT] Input onChange detected for list "${listType}". New value: "${e.target.value}"`);
+                  setNewItemText(e.target.value);
+              }}
             />
             <Button type="submit" variant="secondary" className="bg-accent hover:bg-accent/90 text-accent-foreground">
               <Plus className="h-4 w-4" />
