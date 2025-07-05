@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -26,6 +27,7 @@ interface ShoppingListProps {
   onRenameItem: (itemId: string, newText: string) => void;
   onMoveItem: (itemId: string) => void;
   onMoveItemOrder: (itemId: string, direction: 'up' | 'down') => void;
+  onReorderItems: (isCompletedList: boolean, dragIndex: number, hoverIndex: number) => void;
   viewMode?: 'tabs' | 'side-by-side';
 }
 
@@ -39,9 +41,11 @@ export default function ShoppingList({
   onRenameItem,
   onMoveItem,
   onMoveItemOrder,
+  onReorderItems,
   viewMode = 'tabs',
 }: ShoppingListProps) {
   const [newItemText, setNewItemText] = React.useState('');
+  const [showInputError, setShowInputError] = React.useState(false);
   const [isRenameDialogOpen, setIsRenameDialogOpen] = React.useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [activeItem, setActiveItem] = React.useState<Item | null>(null);
@@ -50,18 +54,18 @@ export default function ShoppingList({
   const { toast, dismiss } = useToast();
   const isMobile = useIsMobile();
   
+  const dragItem = React.useRef<number | null>(null);
+  const dragOverItem = React.useRef<number | null>(null);
+  
   const handleAddItem = (e: React.FormEvent) => {
     e.preventDefault();
     const text = newItemText.trim();
     if (text) {
+      setShowInputError(false);
       onAddItem(text);
       setNewItemText('');
     } else {
-      toast({
-        title: 'No item entered',
-        description: 'Please type an item name in the input field before adding.',
-        variant: 'destructive',
-      });
+      setShowInputError(true);
     }
   };
 
@@ -115,6 +119,15 @@ export default function ShoppingList({
     }
   };
 
+  const handleDragSort = (isCompletedList: boolean) => {
+    if (dragItem.current === null || dragOverItem.current === null) return;
+    if (dragItem.current !== dragOverItem.current) {
+        onReorderItems(isCompletedList, dragItem.current, dragOverItem.current);
+    }
+    dragItem.current = null;
+    dragOverItem.current = null;
+  };
+
   const activeItems = listType === 'regular' ? items.filter(item => !item.completed) : items;
   const completedItems = listType === 'regular' ? items.filter(item => item.completed) : [];
 
@@ -127,9 +140,17 @@ export default function ShoppingList({
         return (
           <div
             key={item.id}
-            className="group flex items-center gap-2 p-2 pr-1 rounded-lg bg-white/80 shadow-sm transition-all duration-300"
+            draggable={!isMobile}
+            onDragStart={() => (dragItem.current = index)}
+            onDragEnter={() => (dragOverItem.current = index)}
+            onDragEnd={() => handleDragSort(isCompletedList)}
+            onDragOver={(e) => e.preventDefault()}
+            className={cn(
+              "group flex items-center gap-2 p-2 pr-1 rounded-lg bg-white/80 shadow-sm transition-all duration-300",
+              !isMobile && "cursor-grab active:cursor-grabbing"
+            )}
           >
-            {!isMobile && <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab active:cursor-grabbing" />}
+            {!isMobile && <GripVertical className="h-5 w-5 text-muted-foreground" />}
             <Checkbox
               id={`item-${item.id}`}
               checked={item.completed}
@@ -221,7 +242,13 @@ export default function ShoppingList({
               name="newItemText"
               placeholder={listType === 'regular' ? "Add a regular item..." : "Add a one-off item..."}
               value={newItemText}
-              onChange={(e) => setNewItemText(e.target.value)}
+              onChange={(e) => {
+                setNewItemText(e.target.value);
+                if (showInputError) {
+                    setShowInputError(false);
+                }
+              }}
+              className={cn(showInputError && "border-destructive focus-visible:ring-destructive")}
             />
             <Button type="submit" variant="secondary" className="bg-accent hover:bg-accent/90 text-accent-foreground">
               <Plus className="h-4 w-4" />

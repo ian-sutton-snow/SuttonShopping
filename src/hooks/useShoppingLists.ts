@@ -241,6 +241,31 @@ export const useShoppingLists = () => {
     });
   }, [updateStore]);
 
+  const reorderItems = useCallback((storeId: string, listType: 'regular' | 'oneOff', isCompletedList: boolean, dragIndex: number, hoverIndex: number) => {
+    updateStore(storeId, store => {
+      // For one-off lists, reordering is simple.
+      if (listType === 'oneOff') {
+        const list = [...store.lists.oneOff];
+        const [draggedItem] = list.splice(dragIndex, 1);
+        list.splice(hoverIndex, 0, draggedItem);
+        return { ...store, lists: { ...store.lists, oneOff: list } };
+      }
+      
+      // For regular lists, we must handle active and completed items separately.
+      const originalList = store.lists.regular;
+      const activeItems = originalList.filter(i => !i.completed);
+      const completedItems = originalList.filter(i => i.completed);
+
+      const targetList = isCompletedList ? completedItems : activeItems;
+      const [draggedItem] = targetList.splice(dragIndex, 1);
+      targetList.splice(hoverIndex, 0, draggedItem);
+      
+      const newList = isCompletedList ? [...activeItems, ...targetList] : [...targetList, ...completedItems];
+
+      return { ...store, lists: { ...store.lists, regular: newList } };
+    });
+  }, [updateStore]);
+
   const reorderStores = useCallback((dragIndex: number, hoverIndex: number) => {
     setStores(prevStores => {
       const newStores = [...prevStores];
@@ -250,5 +275,5 @@ export const useShoppingLists = () => {
     });
   }, []);
 
-  return { stores, addStore, editStore, deleteStore, reorderStores, moveStoreOrder, addItem, toggleItem, deleteItem, renameItem, moveItem, moveItemOrder, isLoaded, iconComponents, icons, restoreOneOffItem };
+  return { stores, addStore, editStore, deleteStore, reorderStores, moveStoreOrder, addItem, toggleItem, deleteItem, renameItem, moveItem, moveItemOrder, reorderItems, isLoaded, iconComponents, icons, restoreOneOffItem };
 };

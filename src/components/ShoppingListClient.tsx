@@ -23,6 +23,7 @@ export default function ShoppingListClient({ storeId }: { storeId: string }) {
     renameItem,
     moveItem,
     moveItemOrder,
+    reorderItems,
     isLoaded,
     iconComponents,
     restoreOneOffItem,
@@ -85,6 +86,7 @@ export default function ShoppingListClient({ storeId }: { storeId: string }) {
     onRenameItem: (itemId: string, newText: string) => renameItem(store.id, listType, itemId, newText),
     onMoveItem: (itemId: string) => moveItem(store.id, itemId),
     onMoveItemOrder: (itemId: string, direction: 'up' | 'down') => moveItemOrder(store.id, itemId, direction),
+    onReorderItems: (isCompletedList: boolean, dragIndex: number, hoverIndex: number) => reorderItems(store.id, listType, isCompletedList, dragIndex, hoverIndex),
     viewMode
   });
 
