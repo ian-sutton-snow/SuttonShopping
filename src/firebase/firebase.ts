@@ -1,28 +1,16 @@
-// Import the functions you need from the SDKs you need
-import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, type Auth } from "firebase/auth";
-import { getFirestore, type Firestore } from "firebase/firestore";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+// This file is now configured for local-only development.
+// The app will use mock data and will not attempt to connect to Firebase.
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
-};
+import type { FirebaseApp } from "firebase/app";
+import type { Auth, GoogleAuthProvider } from "firebase/auth";
+import type { Firestore } from "firebase/firestore";
 
-export const isFirebaseConfigured = !!(firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY");
+export const isFirebaseConfigured = false;
 
-// Initialize Firebase
-const app: FirebaseApp | null = isFirebaseConfigured ? (!getApps().length ? initializeApp(firebaseConfig) : getApp()) : null;
-const auth: Auth | null = app ? getAuth(app) : null;
-const db: Firestore | null = app ? getFirestore(app) : null;
-const googleProvider: GoogleAuthProvider | null = app ? new GoogleAuthProvider() : null;
+// In local-only mode, these are null to prevent any Firebase connection.
+const app: FirebaseApp | null = null;
+const auth: Auth | null = null;
+const db: Firestore | null = null;
+const googleProvider: GoogleAuthProvider | null = null;
 
 export { app, auth, db, googleProvider };
