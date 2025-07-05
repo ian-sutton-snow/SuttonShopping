@@ -13,8 +13,10 @@ import type { Item } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { TabbedViewIcon, SideBySideViewIcon } from '@/components/Icons';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useAuth } from '@/context/AuthContext';
 
 export default function ShoppingListClient({ storeId }: { storeId: string }) {
+  const { user } = useAuth();
   const {
     stores,
     addItem,
@@ -27,7 +29,7 @@ export default function ShoppingListClient({ storeId }: { storeId: string }) {
     isLoaded,
     iconComponents,
     restoreOneOffItem,
-  } = useShoppingLists();
+  } = useShoppingLists(user?.uid);
   
   const [viewMode, setViewMode] = useState<'tabs' | 'side-by-side'>('tabs');
   const isMobile = useIsMobile();
@@ -107,19 +109,21 @@ export default function ShoppingListClient({ storeId }: { storeId: string }) {
                 {store.name}
                 </h1>
             </div>
-            <div className='flex items-center gap-1'>
-                <Button variant={viewMode === 'tabs' ? 'secondary' : 'ghost'} size="icon" onClick={() => setViewMode('tabs')}>
-                    <TabbedViewIcon className="h-8 w-8" />
-                    <span className="sr-only">Tabbed View</span>
-                </Button>
-                <Button variant={viewMode === 'side-by-side' ? 'secondary' : 'ghost'} size="icon" onClick={() => setViewMode('side-by-side')}>
-                    <SideBySideViewIcon className="h-8 w-8" />
-                    <span className="sr-only">Side-by-side View</span>
-                </Button>
-            </div>
+            {!isMobile && (
+              <div className='flex items-center gap-1'>
+                  <Button variant={viewMode === 'tabs' ? 'secondary' : 'ghost'} size="icon" onClick={() => setViewMode('tabs')}>
+                      <TabbedViewIcon className="h-8 w-8" />
+                      <span className="sr-only">Tabbed View</span>
+                  </Button>
+                  <Button variant={viewMode === 'side-by-side' ? 'secondary' : 'ghost'} size="icon" onClick={() => setViewMode('side-by-side')}>
+                      <SideBySideViewIcon className="h-8 w-8" />
+                      <span className="sr-only">Side-by-side View</span>
+                  </Button>
+              </div>
+            )}
         </div>
         
-        {viewMode === 'tabs' ? (
+        {viewMode === 'tabs' && !isMobile ? (
             <Tabs defaultValue="regular" className="w-full">
             <TabsList className="grid w-full grid-cols-2 md:w-96">
                 <TabsTrigger value="regular">Regular Items</TabsTrigger>

@@ -5,8 +5,6 @@ import { useState, useEffect, useCallback } from 'react';
 import type { Store, Item } from '@/lib/types';
 import { Home, ShoppingCart, Store as StoreIcon, Car, Sprout, Shirt, Dumbbell, Wine, Bike, Gift, BookOpen, Check } from 'lucide-react';
 
-const STORE_KEY = 'shopsphere-stores';
-
 export const icons = ['ShoppingCart', 'Store', 'Home', 'Car', 'Sprout', 'Shirt', 'Dumbbell', 'Wine', 'Bike', 'Gift', 'BookOpen', 'Check'];
 export const iconComponents: { [key: string]: React.ComponentType<{ className?: string }> } = {
   ShoppingCart,
@@ -23,10 +21,11 @@ export const iconComponents: { [key: string]: React.ComponentType<{ className?: 
   Check,
 };
 
-const getInitialStores = (): Store[] => {
-  if (typeof window === 'undefined') {
+const getInitialStores = (userId: string | null): Store[] => {
+  if (typeof window === 'undefined' || !userId) {
     return [];
   }
+  const STORE_KEY = `shopsphere-stores-${userId}`;
   try {
     const item = window.localStorage.getItem(STORE_KEY);
     return item ? JSON.parse(item) : [];
@@ -36,24 +35,29 @@ const getInitialStores = (): Store[] => {
   }
 };
 
-export const useShoppingLists = () => {
+export const useShoppingLists = (userId?: string | null) => {
   const [stores, setStores] = useState<Store[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    setStores(getInitialStores());
+    if (userId) {
+      setStores(getInitialStores(userId));
+    } else {
+      setStores([]);
+    }
     setIsLoaded(true);
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
-    if (isLoaded) {
+    if (isLoaded && userId) {
+      const STORE_KEY = `shopsphere-stores-${userId}`;
       try {
         window.localStorage.setItem(STORE_KEY, JSON.stringify(stores));
       } catch (error) {
         console.error('Failed to save stores to localStorage:', error);
       }
     }
-  }, [stores, isLoaded]);
+  }, [stores, isLoaded, userId]);
 
   const updateStore = useCallback((storeId: string, updateFn: (store: Store) => Store) => {
     setStores(prevStores => prevStores.map(store => store.id === storeId ? updateFn(store) : store));
@@ -243,24 +247,24 @@ export const useShoppingLists = () => {
 
   const reorderItems = useCallback((storeId: string, listType: 'regular' | 'oneOff', isCompletedList: boolean, dragIndex: number, hoverIndex: number) => {
     updateStore(storeId, store => {
-      // For one-off lists, reordering is simple.
+      const originalList = listType === 'regular' ? store.lists.regular : store.lists.oneOff;
+
       if (listType === 'oneOff') {
-        const list = [...store.lists.oneOff];
-        const [draggedItem] = list.splice(dragIndex, 1);
-        list.splice(hoverIndex, 0, draggedItem);
-        return { ...store, lists: { ...store.lists, oneOff: list } };
+        const reorderedList = [...originalList];
+        const [draggedItem] = reorderedList.splice(dragIndex, 1);
+        reorderedList.splice(hoverIndex, 0, draggedItem);
+        return { ...store, lists: { ...store.lists, oneOff: reorderedList } };
       }
       
-      // For regular lists, we must handle active and completed items separately.
-      const originalList = store.lists.regular;
       const activeItems = originalList.filter(i => !i.completed);
       const completedItems = originalList.filter(i => i.completed);
 
-      const targetList = isCompletedList ? completedItems : activeItems;
-      const [draggedItem] = targetList.splice(dragIndex, 1);
-      targetList.splice(hoverIndex, 0, draggedItem);
+      const listToReorder = isCompletedList ? completedItems : activeItems;
       
-      const newList = isCompletedList ? [...activeItems, ...targetList] : [...targetList, ...completedItems];
+      const [draggedItem] = listToReorder.splice(dragIndex, 1);
+      listToReorder.splice(hoverIndex, 0, draggedItem);
+      
+      const newList = isCompletedList ? [...activeItems, ...listToReorder] : [...listToReorder, ...completedItems];
 
       return { ...store, lists: { ...store.lists, regular: newList } };
     });

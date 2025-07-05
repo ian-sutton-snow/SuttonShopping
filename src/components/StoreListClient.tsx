@@ -34,12 +34,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, MoreHorizontal, Pencil, Trash2, GripVertical, ShoppingBasket, MoveUp, MoveDown } from 'lucide-react';
+import { Plus, MoreHorizontal, Pencil, Trash2, GripVertical, ShoppingBasket, MoveUp, MoveDown, LogIn } from 'lucide-react';
 import Header from '@/components/Header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Store } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useAuth } from '@/context/AuthContext';
 
 const IconPicker = ({
   allIcons,
@@ -74,7 +75,8 @@ const IconPicker = ({
 );
 
 export default function StoreListClient() {
-  const { stores, addStore, editStore, deleteStore, reorderStores, moveStoreOrder, isLoaded, iconComponents, icons } = useShoppingLists();
+  const { user, signInWithGoogle, isAuthLoaded } = useAuth();
+  const { stores, addStore, editStore, deleteStore, reorderStores, moveStoreOrder, isLoaded, iconComponents, icons } = useShoppingLists(user?.uid);
   const isMobile = useIsMobile();
   
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
@@ -139,6 +141,112 @@ export default function StoreListClient() {
     dragOverItem.current = null;
   };
 
+  const renderContent = () => {
+    if (!isAuthLoaded || (user && !isLoaded)) {
+       return (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {[...Array(4)].map((_, i) => (
+              <Card key={i}><CardHeader className="flex flex-row items-center gap-4"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-6 w-3/4" /></CardHeader><CardContent><Skeleton className="h-4 w-1/2" /></CardContent></Card>
+            ))}
+          </div>
+        );
+    }
+
+    if (!user) {
+      return (
+         <div className="text-center py-20 bg-card rounded-lg shadow-sm border border-dashed">
+            <div className="flex justify-center mb-4">
+                <ShoppingBasket className="h-16 w-16 text-muted-foreground" />
+            </div>
+            <h2 className="text-2xl font-semibold text-gray-700">Welcome to ShopSphere</h2>
+            <p className="text-muted-foreground mt-2 mb-6">Sign in to manage and sync your shopping lists across devices.</p>
+            <Button onClick={signInWithGoogle}>
+              <LogIn className="mr-2 h-4 w-4" /> Sign In with Google
+            </Button>
+          </div>
+      );
+    }
+
+    if (stores.length > 0) {
+      return (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {stores.map((store, index) => {
+            const Icon = iconComponents[store.icon];
+            const totalItems = store.lists.regular.length + store.lists.oneOff.length;
+            const canMoveUp = index > 0;
+            const canMoveDown = index < stores.length - 1;
+            return (
+               <div
+                  key={store.id}
+                  draggable={!isMobile}
+                  onDragStart={() => (dragItem.current = index)}
+                  onDragEnter={() => (dragOverItem.current = index)}
+                  onDragEnd={handleDragSort}
+                  onDragOver={(e) => e.preventDefault()}
+                  className={cn(!isMobile && "cursor-grab active:cursor-grabbing")}
+                >
+                <Card className="shadow-lg transition-transform transform hover:-translate-y-1 h-full flex flex-col hover:border-primary relative">
+                   <Link href={`/list/${store.id}`} className="focus:outline-none focus:ring-2 focus:ring-primary rounded-lg flex-grow flex flex-col">
+                      <CardHeader className="flex flex-row items-center gap-4">
+                          {Icon && <Icon className="h-8 w-8 text-primary" />}
+                          <CardTitle className="font-headline text-xl">{store.name}</CardTitle>
+                      </CardHeader>
+                      <CardContent className="flex-grow">
+                          <p className="text-sm text-muted-foreground">{totalItems} items</p>
+                      </CardContent>
+                  </Link>
+
+                  <div className="absolute top-2 right-2 flex items-center gap-1">
+                      {!isMobile && <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab" />}
+                      <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => moveStoreOrder(store.id, 'up')} disabled={!canMoveUp}>
+                                  <MoveUp className="mr-2 h-4 w-4" />
+                                  <span>Move Up</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => moveStoreOrder(store.id, 'down')} disabled={!canMoveDown}>
+                                  <MoveDown className="mr-2 h-4 w-4" />
+                                  <span>Move Down</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => openEditDialog(store)}>
+                                  <Pencil className="mr-2 h-4 w-4" />
+                                  <span>Edit</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => openDeleteDialog(store)} className="text-destructive focus:text-destructive">
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  <span>Delete</span>
+                              </DropdownMenuItem>
+                          </DropdownMenuContent>
+                      </DropdownMenu>
+                  </div>
+                </Card>
+              </div>
+            );
+          })}
+        </div>
+      );
+    } else {
+      return (
+        <div className="text-center py-20 bg-card rounded-lg shadow-sm border border-dashed">
+          <div className="flex justify-center mb-4">
+              <ShoppingBasket className="h-16 w-16 text-muted-foreground" />
+          </div>
+          <h2 className="text-2xl font-semibold text-gray-700">Your shopping world is empty!</h2>
+          <p className="text-muted-foreground mt-2 mb-6">Get started by creating your first store list.</p>
+          <Button onClick={openAddDialog}>
+            <Plus className="mr-2 h-4 w-4" /> Add Your First Store
+          </Button>
+        </div>
+      );
+    }
+  }
+
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
@@ -147,7 +255,7 @@ export default function StoreListClient() {
           <h1 className="text-3xl font-bold font-headline text-gray-800">My Stores</h1>
             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                 <DialogTrigger asChild>
-                    <Button onClick={openAddDialog}>
+                    <Button onClick={openAddDialog} disabled={!user}>
                         <Plus className="mr-2 h-4 w-4" /> Add Store
                     </Button>
                 </DialogTrigger>
@@ -215,87 +323,9 @@ export default function StoreListClient() {
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
+        
+        {renderContent()}
 
-        {!isLoaded ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {[...Array(4)].map((_, i) => (
-              <Card key={i}><CardHeader className="flex flex-row items-center gap-4"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-6 w-3/4" /></CardHeader><CardContent><Skeleton className="h-4 w-1/2" /></CardContent></Card>
-            ))}
-          </div>
-        ) : stores.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {stores.map((store, index) => {
-              const Icon = iconComponents[store.icon];
-              const totalItems = store.lists.regular.length + store.lists.oneOff.length;
-              const canMoveUp = index > 0;
-              const canMoveDown = index < stores.length - 1;
-              return (
-                 <div
-                    key={store.id}
-                    draggable={!isMobile}
-                    onDragStart={() => (dragItem.current = index)}
-                    onDragEnter={() => (dragOverItem.current = index)}
-                    onDragEnd={handleDragSort}
-                    onDragOver={(e) => e.preventDefault()}
-                    className={cn(!isMobile && "cursor-grab active:cursor-grabbing")}
-                  >
-                  <Card className="shadow-lg transition-transform transform hover:-translate-y-1 h-full flex flex-col hover:border-primary relative">
-                     <Link href={`/list/${store.id}`} className="focus:outline-none focus:ring-2 focus:ring-primary rounded-lg flex-grow flex flex-col">
-                        <CardHeader className="flex flex-row items-center gap-4">
-                            {Icon && <Icon className="h-8 w-8 text-primary" />}
-                            <CardTitle className="font-headline text-xl">{store.name}</CardTitle>
-                        </CardHeader>
-                        <CardContent className="flex-grow">
-                            <p className="text-sm text-muted-foreground">{totalItems} items</p>
-                        </CardContent>
-                    </Link>
-
-                    <div className="absolute top-2 right-2 flex items-center gap-1">
-                        {!isMobile && <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab" />}
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => moveStoreOrder(store.id, 'up')} disabled={!canMoveUp}>
-                                    <MoveUp className="mr-2 h-4 w-4" />
-                                    <span>Move Up</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => moveStoreOrder(store.id, 'down')} disabled={!canMoveDown}>
-                                    <MoveDown className="mr-2 h-4 w-4" />
-                                    <span>Move Down</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => openEditDialog(store)}>
-                                    <Pencil className="mr-2 h-4 w-4" />
-                                    <span>Edit</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => openDeleteDialog(store)} className="text-destructive focus:text-destructive">
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    <span>Delete</span>
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </div>
-                  </Card>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="text-center py-20 bg-card rounded-lg shadow-sm border border-dashed">
-            <div className="flex justify-center mb-4">
-                <ShoppingBasket className="h-16 w-16 text-muted-foreground" />
-            </div>
-            <h2 className="text-2xl font-semibold text-gray-700">Your shopping world is empty!</h2>
-            <p className="text-muted-foreground mt-2 mb-6">Get started by creating your first store list.</p>
-            <Button onClick={openAddDialog}>
-              <Plus className="mr-2 h-4 w-4" /> Add Your First Store
-            </Button>
-          </div>
-        )}
       </main>
     </div>
   );
