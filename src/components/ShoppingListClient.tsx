@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useShoppingLists } from '@/hooks/useShoppingLists';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -30,13 +30,20 @@ export default function ShoppingListClient({ storeId }: { storeId: string }) {
     restoreOneOffItem,
   } = useShoppingLists();
   
-  const [viewMode, setViewMode] = useState<'tabs' | 'side-by-side'>('tabs');
   const isMobile = useIsMobile();
+  const [viewMode, setViewMode] = useState<'tabs' | 'side-by-side' | null>(null);
+
+  useEffect(() => {
+    // Set initial view mode based on device, avoids hydration mismatch
+    if (viewMode === null) {
+      setViewMode(isMobile ? 'side-by-side' : 'tabs');
+    }
+  }, [isMobile, viewMode]);
 
   const store = stores.find((s) => s.id === storeId);
-  const isSideBySide = isMobile || viewMode === 'side-by-side';
-
-  if (!isLoaded) {
+  
+  // Display loading skeleton until viewMode is determined
+  if (!isLoaded || viewMode === null) {
     return (
       <div className="flex flex-col min-h-screen">
         <Header />
@@ -74,6 +81,7 @@ export default function ShoppingListClient({ storeId }: { storeId: string }) {
   }
 
   const Icon = iconComponents[store.icon];
+  const isSideBySide = viewMode === 'side-by-side';
 
   const shoppingListProps = (listType: 'regular' | 'oneOff', isSideBySideView: boolean) => ({
     listType,
@@ -109,18 +117,16 @@ export default function ShoppingListClient({ storeId }: { storeId: string }) {
                 {store.name}
                 </h1>
             </div>
-            {!isMobile && (
-              <div className='flex items-center gap-1'>
-                  <Button variant={viewMode === 'tabs' ? 'secondary' : 'ghost'} size="icon" onClick={() => setViewMode('tabs')}>
-                      <TabbedViewIcon className="h-8 w-8" />
-                      <span className="sr-only">Tabbed View</span>
-                  </Button>
-                  <Button variant={viewMode === 'side-by-side' ? 'secondary' : 'ghost'} size="icon" onClick={() => setViewMode('side-by-side')}>
-                      <SideBySideViewIcon className="h-8 w-8" />
-                      <span className="sr-only">Side-by-side View</span>
-                  </Button>
-              </div>
-            )}
+            <div className='flex items-center gap-1'>
+              <Button variant={viewMode === 'tabs' ? 'secondary' : 'ghost'} size="icon" onClick={() => setViewMode('tabs')}>
+                  <TabbedViewIcon className="h-8 w-8" />
+                  <span className="sr-only">Tabbed View</span>
+              </Button>
+              <Button variant={viewMode === 'side-by-side' ? 'secondary' : 'ghost'} size="icon" onClick={() => setViewMode('side-by-side')}>
+                  <SideBySideViewIcon className="h-8 w-8" />
+                  <span className="sr-only">Side-by-side View</span>
+              </Button>
+            </div>
         </div>
         
         {!isSideBySide ? (
