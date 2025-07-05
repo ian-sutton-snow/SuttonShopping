@@ -76,7 +76,6 @@ export default function ShoppingListClient({ storeId }: { storeId: string }) {
     listType,
     items: store.lists[listType],
     onAddItem: (text: string) => {
-      console.log(`[LOG 3] ShoppingListClient: onAddItem called for list "${listType}" with text: "${text}"`);
       addItem(store.id, listType, text)
     },
     onToggleItem: (itemId: string, item: Item) => {

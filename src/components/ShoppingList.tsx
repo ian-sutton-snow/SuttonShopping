@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -42,6 +41,7 @@ export default function ShoppingList({
   onMoveItemOrder,
   viewMode = 'tabs',
 }: ShoppingListProps) {
+  const [newItemText, setNewItemText] = React.useState('');
   const [isRenameDialogOpen, setIsRenameDialogOpen] = React.useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [activeItem, setActiveItem] = React.useState<Item | null>(null);
@@ -52,16 +52,10 @@ export default function ShoppingList({
   
   const handleAddItem = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    console.log('[LOG 1] ShoppingList: handleAddItem triggered.');
-    const form = event.currentTarget;
-    const input = form.elements.namedItem('newItemText') as HTMLInputElement;
-    const text = input.value.trim();
+    const text = newItemText.trim();
     if (text) {
-      console.log(`[LOG 2] ShoppingList: Calling onAddItem with text: "${text}"`);
       onAddItem(text);
-      input.value = '';
-    } else {
-       console.log('[LOG 2 FAILED] ShoppingList: Text was empty.');
+      setNewItemText('');
     }
   };
 
@@ -220,6 +214,8 @@ export default function ShoppingList({
             <Input
               name="newItemText"
               placeholder={listType === 'regular' ? "Add a regular item..." : "Add a one-off item..."}
+              value={newItemText}
+              onChange={(e) => setNewItemText(e.target.value)}
             />
             <Button type="submit" variant="secondary" className="bg-accent hover:bg-accent/90 text-accent-foreground">
               <Plus className="h-4 w-4" />
