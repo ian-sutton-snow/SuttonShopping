@@ -99,8 +99,10 @@ export const useShoppingLists = () => {
   }, []);
   
   const addItem = useCallback((storeId: string, listType: 'regular' | 'oneOff', text: string) => {
+    console.log(`[LOG 4] useShoppingLists: addItem hook called. storeId: ${storeId}, listType: ${listType}, text: "${text}"`);
     const newItem: Item = { id: crypto.randomUUID(), text, completed: false };
     updateStore(storeId, store => {
+      console.log(`[LOG 5] useShoppingLists: updating store "${store.name}"`);
       const newLists = {
         ...store.lists,
         [listType]: [newItem, ...store.lists[listType]],
@@ -241,5 +243,14 @@ export const useShoppingLists = () => {
     });
   }, [updateStore]);
 
-  return { stores, addStore, editStore, deleteStore, moveStoreOrder, addItem, toggleItem, deleteItem, renameItem, moveItem, moveItemOrder, isLoaded, iconComponents, icons, restoreOneOffItem };
+  const reorderStores = useCallback((dragIndex: number, hoverIndex: number) => {
+    setStores(prevStores => {
+      const newStores = [...prevStores];
+      const [draggedItem] = newStores.splice(dragIndex, 1);
+      newStores.splice(hoverIndex, 0, draggedItem);
+      return newStores;
+    });
+  }, []);
+
+  return { stores, addStore, editStore, deleteStore, reorderStores, moveStoreOrder, addItem, toggleItem, deleteItem, renameItem, moveItem, moveItemOrder, isLoaded, iconComponents, icons, restoreOneOffItem };
 };

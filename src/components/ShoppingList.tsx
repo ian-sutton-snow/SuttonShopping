@@ -42,8 +42,6 @@ export default function ShoppingList({
   onMoveItemOrder,
   viewMode = 'tabs',
 }: ShoppingListProps) {
-  const [newItemText, setNewItemText] = React.useState('');
-  
   const [isRenameDialogOpen, setIsRenameDialogOpen] = React.useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [activeItem, setActiveItem] = React.useState<Item | null>(null);
@@ -54,9 +52,16 @@ export default function ShoppingList({
   
   const handleAddItem = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (newItemText.trim()) {
-      onAddItem(newItemText.trim());
-      setNewItemText('');
+    console.log('[LOG 1] ShoppingList: handleAddItem triggered.');
+    const form = event.currentTarget;
+    const input = form.elements.namedItem('newItemText') as HTMLInputElement;
+    const text = input.value.trim();
+    if (text) {
+      console.log(`[LOG 2] ShoppingList: Calling onAddItem with text: "${text}"`);
+      onAddItem(text);
+      input.value = '';
+    } else {
+       console.log('[LOG 2 FAILED] ShoppingList: Text was empty.');
     }
   };
 
@@ -213,8 +218,7 @@ export default function ShoppingList({
         <CardContent className="p-4 md:p-6">
           <form onSubmit={handleAddItem} className="flex gap-2 mb-6">
             <Input
-              value={newItemText}
-              onChange={(e) => setNewItemText(e.target.value)}
+              name="newItemText"
               placeholder={listType === 'regular' ? "Add a regular item..." : "Add a one-off item..."}
             />
             <Button type="submit" variant="secondary" className="bg-accent hover:bg-accent/90 text-accent-foreground">
