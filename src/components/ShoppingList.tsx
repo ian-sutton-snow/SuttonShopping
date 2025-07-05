@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Label } from './ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useScreenOrientation } from '@/hooks/useScreenOrientation';
 
 interface ShoppingListProps {
   listType: 'regular' | 'oneOff';
@@ -53,6 +54,7 @@ export default function ShoppingList({
 
   const { toast, dismiss } = useToast();
   const isMobile = useIsMobile();
+  const orientation = useScreenOrientation();
   
   const dragItem = React.useRef<number | null>(null);
   const dragOverItem = React.useRef<number | null>(null);
@@ -66,6 +68,12 @@ export default function ShoppingList({
       setNewItemText('');
     } else {
       setShowInputError(true);
+      toast({
+        title: "Please enter an item",
+        description: "You can't add an empty item to your list.",
+        variant: "destructive",
+        duration: 3000,
+      });
     }
   };
 
@@ -264,9 +272,9 @@ export default function ShoppingList({
           )}
           
           {listType === 'regular' && completedItems.length > 0 && (
-            isMobile && viewMode === 'side-by-side' ? (
+            isMobile && orientation === 'portrait' ? (
               <div className="mt-6 p-4 text-center text-muted-foreground border border-dashed rounded-lg">
-                Completed items are hidden in this view.
+                Completed items are hidden in portrait view.
               </div>
             ) : (
               <>
