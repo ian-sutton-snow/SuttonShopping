@@ -2,8 +2,9 @@
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { onAuthStateChanged, signInWithPopup, signOut, User } from 'firebase/auth';
-import { auth, googleProvider } from '@/firebase/firebase';
+import { auth, googleProvider, isFirebaseConfigured } from '@/firebase/firebase';
 import { useToast } from '@/hooks/use-toast';
+import FirebaseNotConfigured from '@/components/FirebaseNotConfigured';
 
 interface AuthContextType {
   user: User | null;
@@ -20,14 +21,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
+    if (auth) {
+      const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+        setUser(currentUser);
+        setIsAuthLoaded(true);
+      });
+      return () => unsubscribe();
+    } else {
       setIsAuthLoaded(true);
-    });
-    return () => unsubscribe();
+    }
   }, []);
 
   const signInWithGoogle = async () => {
+    if (!auth || !googleProvider) {
+       console.error("Firebase is not configured correctly.");
+       toast({
+         title: 'Configuration Error',
+         description: 'Firebase is not set up. Please add API keys to .env.local',
+         variant: 'destructive',
+       });
+       return;
+    }
     try {
       await signInWithPopup(auth, googleProvider);
       toast({
@@ -47,6 +61,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signOutUser = async () => {
+    if (!auth) return;
     try {
       await signOut(auth);
        toast({
@@ -64,6 +79,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
     }
   };
+
+  if (!isFirebaseConfigured) {
+    return <FirebaseNotConfigured />;
+  }
 
   return (
     <AuthContext.Provider value={{ user, signInWithGoogle, signOut: signOutUser, isAuthLoaded }}>
