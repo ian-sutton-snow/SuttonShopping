@@ -99,14 +99,12 @@ export const useShoppingLists = () => {
   }, []);
   
   const addItem = useCallback((storeId: string, listType: 'regular' | 'oneOff', text: string) => {
-    console.log(`[LOG 4] useShoppingLists: addItem hook called with storeId: ${storeId}, listType: ${listType}, text: "${text}"`);
     const newItem: Item = { id: crypto.randomUUID(), text, completed: false };
     updateStore(storeId, store => {
       const newLists = {
         ...store.lists,
         [listType]: [newItem, ...store.lists[listType]],
       };
-      console.log('[LOG 5] useShoppingLists: New item created. Preparing to update store state.');
       return { ...store, lists: newLists };
     });
   }, [updateStore]);
