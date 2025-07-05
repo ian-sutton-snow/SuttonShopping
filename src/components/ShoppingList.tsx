@@ -29,7 +29,7 @@ interface ShoppingListProps {
   onMoveItem: (itemId: string) => void;
   onMoveItemOrder: (itemId: string, direction: 'up' | 'down') => void;
   onReorderItems: (isCompletedList: boolean, dragIndex: number, hoverIndex: number) => void;
-  viewMode?: 'tabs' | 'side-by-side';
+  isSideBySide?: boolean;
 }
 
 export default function ShoppingList({
@@ -43,7 +43,7 @@ export default function ShoppingList({
   onMoveItem,
   onMoveItemOrder,
   onReorderItems,
-  viewMode = 'tabs',
+  isSideBySide = false,
 }: ShoppingListProps) {
   const [newItemText, setNewItemText] = React.useState('');
   const [showInputError, setShowInputError] = React.useState(false);
@@ -211,6 +211,8 @@ export default function ShoppingList({
     </div>
   );
 
+  const hideCompleted = isMobile && orientation === 'portrait' && isSideBySide;
+
   return (
     <>
       <Dialog open={isRenameDialogOpen} onOpenChange={setIsRenameDialogOpen}>
@@ -272,9 +274,9 @@ export default function ShoppingList({
           )}
           
           {listType === 'regular' && completedItems.length > 0 && (
-            isMobile && orientation === 'portrait' ? (
+            hideCompleted ? (
               <div className="mt-6 p-4 text-center text-muted-foreground border border-dashed rounded-lg">
-                Completed items are hidden in portrait view.
+                Completed items are hidden in this viewing mode.
               </div>
             ) : (
               <>

@@ -35,6 +35,7 @@ export default function ShoppingListClient({ storeId }: { storeId: string }) {
   const isMobile = useIsMobile();
 
   const store = stores.find((s) => s.id === storeId);
+  const isSideBySide = isMobile || viewMode === 'side-by-side';
 
   if (!isLoaded) {
     return (
@@ -75,7 +76,7 @@ export default function ShoppingListClient({ storeId }: { storeId: string }) {
 
   const Icon = iconComponents[store.icon];
 
-  const shoppingListProps = (listType: 'regular' | 'oneOff') => ({
+  const shoppingListProps = (listType: 'regular' | 'oneOff', isSideBySideView: boolean) => ({
     listType,
     items: store.lists[listType],
     onAddItem: (text: string) => addItem(store.id, listType, text),
@@ -89,7 +90,7 @@ export default function ShoppingListClient({ storeId }: { storeId: string }) {
     onMoveItem: (itemId: string) => moveItem(store.id, itemId),
     onMoveItemOrder: (itemId: string, direction: 'up' | 'down') => moveItemOrder(store.id, itemId, direction),
     onReorderItems: (isCompletedList: boolean, dragIndex: number, hoverIndex: number) => reorderItems(store.id, listType, isCompletedList, dragIndex, hoverIndex),
-    viewMode
+    isSideBySide: isSideBySideView,
   });
 
   return (
@@ -123,28 +124,28 @@ export default function ShoppingListClient({ storeId }: { storeId: string }) {
             )}
         </div>
         
-        {viewMode === 'tabs' && !isMobile ? (
+        {!isSideBySide ? (
             <Tabs defaultValue="regular" className="w-full">
             <TabsList className="grid w-full grid-cols-2 md:w-96">
                 <TabsTrigger value="regular">Regular Items</TabsTrigger>
                 <TabsTrigger value="oneOff">One-Off Items</TabsTrigger>
             </TabsList>
             <TabsContent value="regular">
-                <ShoppingList {...shoppingListProps('regular')} />
+                <ShoppingList {...shoppingListProps('regular', isSideBySide)} />
             </TabsContent>
             <TabsContent value="oneOff">
-                <ShoppingList {...shoppingListProps('oneOff')} />
+                <ShoppingList {...shoppingListProps('oneOff', isSideBySide)} />
             </TabsContent>
             </Tabs>
         ) : (
             <div className="grid md:grid-cols-2 gap-8 items-start">
                 <div>
                     <h2 className="text-xl font-bold font-headline mb-4">Regular Items</h2>
-                    <ShoppingList {...shoppingListProps('regular')} />
+                    <ShoppingList {...shoppingListProps('regular', isSideBySide)} />
                 </div>
                 <div>
                     <h2 className="text-xl font-bold font-headline mb-4">One-Off Items</h2>
-                    <ShoppingList {...shoppingListProps('oneOff')} />
+                    <ShoppingList {...shoppingListProps('oneOff', isSideBySide)} />
                 </div>
             </div>
         )}
