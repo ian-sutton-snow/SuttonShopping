@@ -53,10 +53,8 @@ export default function ShoppingList({
   const isMobile = useIsMobile();
   
   const handleAddItem = (event: React.FormEvent<HTMLFormElement>) => {
-    console.log('[LOG 1] ShoppingList: handleAddItem triggered.');
     event.preventDefault();
     if (newItemText.trim()) {
-      console.log(`[LOG 2] ShoppingList: Calling onAddItem with text: "${newItemText.trim()}"`);
       onAddItem(newItemText.trim());
       setNewItemText('');
     }
