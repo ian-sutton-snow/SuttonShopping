@@ -56,9 +56,13 @@ export const useShoppingLists = () => {
   }, [stores, isLoaded]);
 
   const updateStore = useCallback((storeId: string, updateFn: (store: Store) => Store) => {
-    setStores(prevStores => 
-      prevStores.map(store => store.id === storeId ? updateFn(store) : store)
-    );
+    console.log(`[LOG 7] useShoppingLists: updateStore called for storeId: ${storeId}`);
+    setStores(prevStores => {
+      console.log('[LOG 8] useShoppingLists: setStores triggered. Mapping through previous stores.');
+      const newStores = prevStores.map(store => store.id === storeId ? updateFn(store) : store);
+      console.log('[LOG 9] useShoppingLists: State update complete. New stores object:', newStores);
+      return newStores;
+    });
   }, []);
 
   const addStore = useCallback((name: string, icon: string) => {
@@ -101,14 +105,18 @@ export const useShoppingLists = () => {
   }, []);
   
   const addItem = useCallback((storeId: string, listType: 'regular' | 'oneOff', text: string) => {
+    console.log(`[LOG 4] useShoppingLists: addItem called for storeId: ${storeId}, listType: ${listType}, text: "${text}"`);
     const newItem: Item = { id: crypto.randomUUID(), text, completed: false };
-    updateStore(storeId, store => ({
-      ...store,
-      lists: {
+    updateStore(storeId, store => {
+      console.log(`[LOG 5] useShoppingLists: Updating store "${store.name}". Current items in ${listType}:`, store.lists[listType].length);
+      const newLists = {
         ...store.lists,
         [listType]: [newItem, ...store.lists[listType]],
-      }
-    }));
+      };
+      const updatedStore = { ...store, lists: newLists };
+      console.log(`[LOG 6] useShoppingLists: New items in ${listType}:`, updatedStore.lists[listType].length);
+      return updatedStore;
+    });
   }, [updateStore]);
 
   const toggleItem = useCallback((storeId: string, listType: 'regular' | 'oneOff', itemId: string) => {
@@ -128,7 +136,10 @@ export const useShoppingLists = () => {
   const restoreOneOffItem = useCallback((storeId: string, item: Item) => {
     updateStore(storeId, store => {
       const newLists = { ...store.lists };
-      newLists.oneOff = [item, ...newLists.oneOff];
+      const itemExists = newLists.oneOff.some(i => i.id === item.id);
+      if (!itemExists) {
+        newLists.oneOff = [item, ...newLists.oneOff];
+      }
       return { ...store, lists: newLists };
     });
   }, [updateStore]);

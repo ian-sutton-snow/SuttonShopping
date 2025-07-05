@@ -2,7 +2,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useShoppingLists } from '@/hooks/useShoppingLists';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -10,7 +9,7 @@ import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import Header from '@/components/Header';
 import ShoppingList from '@/components/ShoppingList';
-import type { Item, Store } from '@/lib/types';
+import type { Item } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { TabbedViewIcon, SideBySideViewIcon } from '@/components/Icons';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -76,7 +75,10 @@ export default function ShoppingListClient({ storeId }: { storeId: string }) {
   const shoppingListProps = (listType: 'regular' | 'oneOff') => ({
     listType,
     items: store.lists[listType],
-    onAddItem: (text: string) => addItem(store.id, listType, text),
+    onAddItem: (text: string) => {
+      console.log(`[LOG 3] ShoppingListClient: onAddItem called with text: "${text}". Forwarding to useShoppingLists hook.`);
+      addItem(store.id, listType, text)
+    },
     onToggleItem: (itemId: string, item: Item) => {
       toggleItem(store.id, listType, itemId);
       return listType === 'oneOff' ? item : null;
