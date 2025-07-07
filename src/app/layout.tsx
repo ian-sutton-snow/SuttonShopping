@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/context/AuthContext';
 
 export const metadata: Metadata = {
-  title: "ShopSphere",
+  title: "Sutton Shopping",
   description: 'Your personal shopping list manager.',
   manifest: '/manifest.json',
 };

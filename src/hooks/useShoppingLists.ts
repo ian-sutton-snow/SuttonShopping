@@ -21,7 +21,7 @@ export const iconComponents: { [key: string]: React.ComponentType<{ className?: 
 };
 
 // We use a static key for local storage now, since we don't have a real userId.
-const STORE_KEY = `shopsphere-stores-local`;
+const STORE_KEY = `sutton-shopping-stores-local`;
 
 const getInitialStores = (): Store[] => {
   if (typeof window === 'undefined') {

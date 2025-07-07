@@ -10,7 +10,7 @@ const SimpleHeader = () => (
         <div className="flex h-16 items-center justify-between">
           <Link href="/" className="flex items-center gap-2 text-xl font-bold font-headline text-gray-800">
             <Logo className="h-8 w-8 text-primary" />
-            <span>ShopSphere</span>
+            <span>Sutton Shopping</span>
           </Link>
         </div>
       </div>

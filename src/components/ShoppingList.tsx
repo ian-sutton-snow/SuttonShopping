@@ -50,6 +50,7 @@ export default function ShoppingList({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [activeItem, setActiveItem] = React.useState<Item | null>(null);
   const [itemNewName, setItemNewName] = React.useState('');
+  const inputRef = React.useRef<HTMLInputElement>(null);
 
   const { toast, dismiss } = useToast();
   const isMobile = useIsMobile();
@@ -67,12 +68,7 @@ export default function ShoppingList({
       setNewItemText('');
     } else {
       setShowInputError(true);
-      toast({
-        title: "Please enter an item",
-        description: "You can't add an empty item to your list.",
-        variant: "destructive",
-        duration: 3000,
-      });
+      inputRef.current?.focus();
     }
   };
 
@@ -248,6 +244,7 @@ export default function ShoppingList({
         <CardContent className="p-4 md:p-6">
           <form onSubmit={handleAddItem} className="flex gap-2 mb-6">
             <Input
+              ref={inputRef}
               name="newItemText"
               placeholder={listType === 'regular' ? "Add a regular item..." : "Add a one-off item..."}
               value={newItemText}
