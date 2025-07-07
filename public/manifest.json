@@ -1,11 +1,11 @@
 {
-  "name": "Sutton's Shopping",
-  "short_name": "Sutton's Shopping",
-  "theme_color": "#f0f3f7",
-  "background_color": "#f0f3f7",
-  "display": "standalone",
-  "scope": "/",
+  "name": "Sutton Shopping",
+  "short_name": "Sutton Shopping",
+  "description": "Your personal shopping list manager.",
   "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f9fc",
+  "theme_color": "#8ecae6",
   "icons": [
     {
       "src": "/icon-192x192.png",
@@ -15,7 +15,8 @@
     {
       "src": "/icon-512x512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
