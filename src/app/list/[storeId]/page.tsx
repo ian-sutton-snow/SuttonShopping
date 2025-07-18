@@ -12,9 +12,6 @@ export default function ListPage() {
   const { user, signInWithGoogle, isAuthLoaded } = useAuth();
   const storeId = typeof params.storeId === 'string' ? params.storeId : '';
 
-  // With the mock AuthProvider, isAuthLoaded is always true and user always exists,
-  // so the loading and sign-in states will not be shown.
-  // We keep the checks here for when Firebase is re-enabled.
   if (!isAuthLoaded) {
     return (
         <div className="flex flex-col min-h-screen">

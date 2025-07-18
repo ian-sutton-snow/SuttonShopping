@@ -3,6 +3,20 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Store, Item } from '@/lib/types';
 import { Home, ShoppingCart, Store as StoreIcon, Car, Sprout, Shirt, Dumbbell, Wine, Bike, Gift, BookOpen, Check } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { db } from '@/firebase/firebase';
+import { 
+  collection, 
+  doc, 
+  onSnapshot, 
+  setDoc, 
+  deleteDoc, 
+  writeBatch,
+  query,
+  orderBy,
+  addDoc,
+  updateDoc,
+} from 'firebase/firestore';
 
 export const icons = ['ShoppingCart', 'Store', 'Home', 'Car', 'Sprout', 'Shirt', 'Dumbbell', 'Wine', 'Bike', 'Gift', 'BookOpen', 'Check'];
 export const iconComponents: { [key: string]: React.ComponentType<{ className?: string }> } = {
@@ -20,260 +34,253 @@ export const iconComponents: { [key: string]: React.ComponentType<{ className?: 
   Check,
 };
 
-// We use a static key for local storage now, since we don't have a real userId.
-const STORE_KEY = `sutton-shopping-stores-local`;
-
-const getInitialStores = (): Store[] => {
-  if (typeof window === 'undefined') {
-    return [];
-  }
-  try {
-    const item = window.localStorage.getItem(STORE_KEY);
-    return item ? JSON.parse(item) : [];
-  } catch (error) {
-    console.error(error);
-    return [];
-  }
-};
-
 export const useShoppingLists = () => {
+  const { user } = useAuth();
   const [stores, setStores] = useState<Store[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    setStores(getInitialStores());
-    setIsLoaded(true);
-  }, []);
-
-  useEffect(() => {
-    if (isLoaded) {
-      try {
-        window.localStorage.setItem(STORE_KEY, JSON.stringify(stores));
-      } catch (error) {
-        console.error('Failed to save stores to localStorage:', error);
-      }
+    if (!user) {
+      setStores([]);
+      setIsLoaded(true);
+      return;
     }
-  }, [stores, isLoaded]);
 
-  const updateStore = useCallback((storeId: string, updateFn: (store: Store) => Store) => {
-    setStores(prevStores => prevStores.map(store => store.id === storeId ? updateFn(store) : store));
-  }, []);
+    const storesCollectionRef = collection(db, 'users', user.uid, 'stores');
+    const q = query(storesCollectionRef, orderBy('order', 'asc'));
 
-  const addStore = useCallback((name: string, icon: string) => {
-    setStores((prevStores) => {
-      const newStore: Store = {
-        id: crypto.randomUUID(),
-        name,
-        icon: icon || icons[0],
-        lists: { regular: [], oneOff: [] },
-      };
-      return [...prevStores, newStore];
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const storesData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as Store));
+      setStores(storesData);
+      setIsLoaded(true);
+    }, (error) => {
+      console.error("Error fetching stores:", error);
+      setIsLoaded(true);
     });
-  }, []);
+
+    return () => unsubscribe();
+  }, [user]);
+
+  const addStore = useCallback(async (name: string, icon: string) => {
+    if (!user) return;
+    const newOrder = stores.length;
+    await addDoc(collection(db, 'users', user.uid, 'stores'), {
+      name,
+      icon: icon || icons[0],
+      lists: { regular: [], oneOff: [] },
+      order: newOrder,
+    });
+  }, [user, stores.length]);
   
-  const editStore = useCallback((storeId: string, newName: string, newIcon: string) => {
-    setStores(prevStores => 
-      prevStores.map(store => 
-        store.id === storeId ? { ...store, name: newName, icon: newIcon } : store
-      )
-    );
-  }, []);
+  const editStore = useCallback(async (storeId: string, newName: string, newIcon: string) => {
+    if (!user) return;
+    const storeRef = doc(db, 'users', user.uid, 'stores', storeId);
+    await updateDoc(storeRef, { name: newName, icon: newIcon });
+  }, [user]);
 
-  const deleteStore = useCallback((storeId: string) => {
-    setStores(prevStores => prevStores.filter(store => store.id !== storeId));
-  }, []);
+  const deleteStore = useCallback(async (storeId: string) => {
+    if (!user) return;
+    const storeRef = doc(db, 'users', user.uid, 'stores', storeId);
+    await deleteDoc(storeRef);
+    // Note: Re-ordering other stores is handled via a cloud function or needs manual adjustment here
+  }, [user]);
 
-  const moveStoreOrder = useCallback((storeId: string, direction: 'up' | 'down') => {
-    setStores(prevStores => {
-      const storeIndex = prevStores.findIndex(s => s.id === storeId);
-      if (storeIndex === -1) return prevStores;
-
-      const newIndex = direction === 'up' ? storeIndex - 1 : storeIndex + 1;
-      if (newIndex < 0 || newIndex >= prevStores.length) return prevStores;
-
-      const reorderedStores = [...prevStores];
-      const [movedStore] = reorderedStores.splice(storeIndex, 1);
-      reorderedStores.splice(newIndex, 0, movedStore);
-      return reorderedStores;
+  const reorderStores = useCallback(async (dragIndex: number, hoverIndex: number) => {
+    if (!user) return;
+    
+    const newStores = [...stores];
+    const [draggedItem] = newStores.splice(dragIndex, 1);
+    newStores.splice(hoverIndex, 0, draggedItem);
+    
+    const batch = writeBatch(db);
+    newStores.forEach((store, index) => {
+      const storeRef = doc(db, 'users', user.uid, 'stores', store.id);
+      batch.update(storeRef, { order: index });
     });
-  }, []);
+    
+    await batch.commit();
+  }, [user, stores]);
+  
+  const moveStoreOrder = useCallback(async (storeId: string, direction: 'up' | 'down') => {
+    if (!user) return;
+    const storeIndex = stores.findIndex(s => s.id === storeId);
+    if (storeIndex === -1) return;
+
+    const newIndex = direction === 'up' ? storeIndex - 1 : storeIndex + 1;
+    if (newIndex < 0 || newIndex >= stores.length) return;
+
+    await reorderStores(storeIndex, newIndex);
+  }, [user, stores, reorderStores]);
+
+  const updateStoreLists = useCallback(async (storeId: string, newLists: { regular: Item[], oneOff: Item[] }) => {
+      if (!user) return;
+      const storeRef = doc(db, 'users', user.uid, 'stores', storeId);
+      await updateDoc(storeRef, { lists: newLists });
+  }, [user]);
   
   const addItem = useCallback((storeId: string, listType: 'regular' | 'oneOff', text: string) => {
+    const store = stores.find(s => s.id === storeId);
+    if (!store) return;
     const newItem: Item = { id: crypto.randomUUID(), text, completed: false };
-    updateStore(storeId, store => {
-      const newLists = {
-        ...store.lists,
-        [listType]: [newItem, ...store.lists[listType]],
-      };
-      return { ...store, lists: newLists };
-    });
-  }, [updateStore]);
+    const newLists = {
+      ...store.lists,
+      [listType]: [newItem, ...store.lists[listType]],
+    };
+    updateStoreLists(storeId, newLists);
+  }, [stores, updateStoreLists]);
 
   const toggleItem = useCallback((storeId: string, listType: 'regular' | 'oneOff', itemId: string) => {
-    updateStore(storeId, store => {
-      const newLists = { ...store.lists };
-      if (listType === 'oneOff') {
-        newLists.oneOff = newLists.oneOff.filter(item => item.id !== itemId);
-      } else {
-        newLists.regular = newLists.regular.map(item =>
-          item.id === itemId ? { ...item, completed: !item.completed } : item
-        );
-      }
-      return { ...store, lists: newLists };
-    });
-  }, [updateStore]);
+    const store = stores.find(s => s.id === storeId);
+    if (!store) return;
+
+    const newLists = { ...store.lists };
+    if (listType === 'oneOff') {
+      newLists.oneOff = newLists.oneOff.filter(item => item.id !== itemId);
+    } else {
+      newLists.regular = newLists.regular.map(item =>
+        item.id === itemId ? { ...item, completed: !item.completed } : item
+      );
+    }
+    updateStoreLists(storeId, newLists);
+  }, [stores, updateStoreLists]);
 
   const restoreOneOffItem = useCallback((storeId: string, item: Item) => {
-    updateStore(storeId, store => {
-      const newLists = { ...store.lists };
-      const itemExists = newLists.oneOff.some(i => i.id === item.id);
-      if (!itemExists) {
-        newLists.oneOff = [item, ...newLists.oneOff];
-      }
-      return { ...store, lists: newLists };
-    });
-  }, [updateStore]);
+    const store = stores.find(s => s.id === storeId);
+    if (!store) return;
+    const newLists = { ...store.lists };
+    const itemExists = newLists.oneOff.some(i => i.id === item.id);
+    if (!itemExists) {
+      newLists.oneOff = [item, ...newLists.oneOff];
+    }
+    updateStoreLists(storeId, newLists);
+  }, [stores, updateStoreLists]);
   
   const deleteItem = useCallback((storeId: string, listType: 'regular' | 'oneOff', itemId: string) => {
-    updateStore(storeId, store => {
-      const list = store.lists[listType].filter(item => item.id !== itemId);
-      return {
-        ...store,
-        lists: {
-          ...store.lists,
-          [listType]: list,
-        }
-      };
-    });
-  }, [updateStore]);
+    const store = stores.find(s => s.id === storeId);
+    if (!store) return;
+
+    const list = store.lists[listType].filter(item => item.id !== itemId);
+    const newLists = {
+      ...store.lists,
+      [listType]: list,
+    };
+    updateStoreLists(storeId, newLists);
+  }, [stores, updateStoreLists]);
 
   const renameItem = useCallback((storeId: string, listType: 'regular' | 'oneOff', itemId: string, newText: string) => {
-    updateStore(storeId, store => {
-      const list = store.lists[listType].map(item => 
-        item.id === itemId ? { ...item, text: newText } : item
-      );
-      return {
-        ...store,
-        lists: {
-          ...store.lists,
-          [listType]: list,
-        }
-      };
-    });
-  }, [updateStore]);
+    const store = stores.find(s => s.id === storeId);
+    if (!store) return;
+    const list = store.lists[listType].map(item => 
+      item.id === itemId ? { ...item, text: newText } : item
+    );
+    const newLists = {
+      ...store.lists,
+      [listType]: list,
+    };
+    updateStoreLists(storeId, newLists);
+  }, [stores, updateStoreLists]);
 
   const moveItem = useCallback((storeId: string, itemId: string) => {
-    updateStore(storeId, store => {
-      let itemToMove: Item | undefined;
-      let sourceList: 'regular' | 'oneOff' | null = null;
-      
-      if (store.lists.regular.some(i => i.id === itemId)) {
-        sourceList = 'regular';
-        itemToMove = store.lists.regular.find(i => i.id === itemId);
-      } else if (store.lists.oneOff.some(i => i.id === itemId)) {
-        sourceList = 'oneOff';
-        itemToMove = store.lists.oneOff.find(i => i.id === itemId);
-      }
+    const store = stores.find(s => s.id === storeId);
+    if (!store) return;
 
-      if (!itemToMove || !sourceList) return store;
+    let itemToMove: Item | undefined;
+    let sourceList: 'regular' | 'oneOff' | null = null;
+    
+    if (store.lists.regular.some(i => i.id === itemId)) {
+      sourceList = 'regular';
+      itemToMove = store.lists.regular.find(i => i.id === itemId);
+    } else if (store.lists.oneOff.some(i => i.id === itemId)) {
+      sourceList = 'oneOff';
+      itemToMove = store.lists.oneOff.find(i => i.id === itemId);
+    }
 
-      const destinationList = sourceList === 'regular' ? 'oneOff' : 'regular';
-      itemToMove = { ...itemToMove, completed: false };
+    if (!itemToMove || !sourceList) return;
 
-      const updatedSourceList = store.lists[sourceList].filter(i => i.id !== itemId);
-      const updatedDestinationList = [itemToMove, ...store.lists[destinationList]];
-      
-      return {
-        ...store,
-        lists: {
-          ...store.lists,
-          [sourceList]: updatedSourceList,
-          [destinationList]: updatedDestinationList,
-        }
-      };
-    });
-  }, [updateStore]);
+    const destinationList = sourceList === 'regular' ? 'oneOff' : 'regular';
+    itemToMove = { ...itemToMove, completed: false };
 
+    const updatedSourceList = store.lists[sourceList].filter(i => i.id !== itemId);
+    const updatedDestinationList = [itemToMove, ...store.lists[destinationList]];
+    
+    const newLists = {
+      ...store.lists,
+      [sourceList]: updatedSourceList,
+      [destinationList]: updatedDestinationList,
+    };
+    updateStoreLists(storeId, newLists);
+  }, [stores, updateStoreLists]);
+
+  const reorderList = (list: Item[], dragIndex: number, hoverIndex: number) => {
+    const reorderedList = [...list];
+    const [draggedItem] = reorderedList.splice(dragIndex, 1);
+    reorderedList.splice(hoverIndex, 0, draggedItem);
+    return reorderedList;
+  };
+  
   const moveItemOrder = useCallback((storeId: string, itemId: string, direction: 'up' | 'down') => {
-    updateStore(storeId, store => {
-        let listType: 'regular' | 'oneOff' | null = null;
-        let isCompleted = false;
+    const store = stores.find(s => s.id === storeId);
+    if (!store) return;
 
-        let regularItem = store.lists.regular.find(i => i.id === itemId);
-        if (regularItem) {
-            listType = 'regular';
-            isCompleted = regularItem.completed;
-        } else if (store.lists.oneOff.some(i => i.id === itemId)) {
-            listType = 'oneOff';
-        } else {
-            return store;
-        }
+    let listType: 'regular' | 'oneOff' | null = null;
+    let isCompleted = false;
 
-        const listToReorder = listType === 'regular' 
-            ? (isCompleted ? store.lists.regular.filter(i => i.completed) : store.lists.regular.filter(i => !i.completed))
-            : store.lists.oneOff;
-        
-        const itemIndex = listToReorder.findIndex(i => i.id === itemId);
-        if (itemIndex === -1) return store;
+    let regularItem = store.lists.regular.find(i => i.id === itemId);
+    if (regularItem) {
+        listType = 'regular';
+        isCompleted = regularItem.completed;
+    } else if (store.lists.oneOff.some(i => i.id === itemId)) {
+        listType = 'oneOff';
+    } else {
+        return;
+    }
 
+    let newLists: { regular: Item[], oneOff: Item[] };
+    if (listType === 'oneOff') {
+        const itemIndex = store.lists.oneOff.findIndex(i => i.id === itemId);
         const newIndex = direction === 'up' ? itemIndex - 1 : itemIndex + 1;
-        if (newIndex < 0 || newIndex >= listToReorder.length) return store;
-
-        const reorderedSubList = [...listToReorder];
-        const [item] = reorderedSubList.splice(itemIndex, 1);
-        reorderedSubList.splice(newIndex, 0, item);
-        
-        let finalRegularList: Item[];
-        if (listType === 'regular') {
-          const otherHalf = isCompleted ? store.lists.regular.filter(i => !i.completed) : store.lists.regular.filter(i => i.completed);
-          finalRegularList = isCompleted ? [...otherHalf, ...reorderedSubList] : [...reorderedSubList, ...otherHalf];
-        } else {
-          finalRegularList = store.lists.regular;
-        }
-
-        return {
-          ...store,
-          lists: {
-            regular: listType === 'regular' ? finalRegularList : store.lists.regular,
-            oneOff: listType === 'oneOff' ? reorderedSubList : store.lists.oneOff,
-          }
-        };
-    });
-  }, [updateStore]);
+        if (newIndex < 0 || newIndex >= store.lists.oneOff.length) return;
+        newLists = {...store.lists, oneOff: reorderList(store.lists.oneOff, itemIndex, newIndex)};
+    } else {
+        const activeItems = store.lists.regular.filter(i => !i.completed);
+        const completedItems = store.lists.regular.filter(i => i.completed);
+        const listToReorder = isCompleted ? completedItems : activeItems;
+        const itemIndex = listToReorder.findIndex(i => i.id === itemId);
+        const newIndex = direction === 'up' ? itemIndex - 1 : itemIndex + 1;
+        if (newIndex < 0 || newIndex >= listToReorder.length) return;
+        const reorderedSubList = reorderList(listToReorder, itemIndex, newIndex);
+        const finalRegularList = isCompleted ? [...activeItems, ...reorderedSubList] : [...reorderedSubList, ...completedItems];
+        newLists = {...store.lists, regular: finalRegularList};
+    }
+    updateStoreLists(storeId, newLists);
+  }, [stores, updateStoreLists]);
 
   const reorderItems = useCallback((storeId: string, listType: 'regular' | 'oneOff', isCompletedList: boolean, dragIndex: number, hoverIndex: number) => {
-    updateStore(storeId, store => {
-      const originalList = listType === 'regular' ? store.lists.regular : store.lists.oneOff;
+    const store = stores.find(s => s.id === storeId);
+    if (!store) return;
 
-      if (listType === 'oneOff') {
-        const reorderedList = [...originalList];
-        const [draggedItem] = reorderedList.splice(dragIndex, 1);
-        reorderedList.splice(hoverIndex, 0, draggedItem);
-        return { ...store, lists: { ...store.lists, oneOff: reorderedList } };
-      }
-      
-      const activeItems = originalList.filter(i => !i.completed);
-      const completedItems = originalList.filter(i => i.completed);
-
-      const listToReorder = isCompletedList ? completedItems : activeItems;
-      
-      const [draggedItem] = listToReorder.splice(dragIndex, 1);
-      listToReorder.splice(hoverIndex, 0, draggedItem);
-      
-      const newList = isCompletedList ? [...activeItems, ...listToReorder] : [...listToReorder, ...completedItems];
-
-      return { ...store, lists: { ...store.lists, regular: newList } };
-    });
-  }, [updateStore]);
-
-  const reorderStores = useCallback((dragIndex: number, hoverIndex: number) => {
-    setStores(prevStores => {
-      const newStores = [...prevStores];
-      const [draggedItem] = newStores.splice(dragIndex, 1);
-      newStores.splice(hoverIndex, 0, draggedItem);
-      return newStores;
-    });
-  }, []);
+    if (listType === 'oneOff') {
+      const newOneOffList = reorderList(store.lists.oneOff, dragIndex, hoverIndex);
+      updateStoreLists(storeId, { ...store.lists, oneOff: newOneOffList });
+      return;
+    }
+    
+    const activeItems = store.lists.regular.filter(i => !i.completed);
+    const completedItems = store.lists.regular.filter(i => i.completed);
+    
+    let newList: Item[];
+    if (isCompletedList) {
+        const reorderedCompleted = reorderList(completedItems, dragIndex, hoverIndex);
+        newList = [...activeItems, ...reorderedCompleted];
+    } else {
+        const reorderedActive = reorderList(activeItems, dragIndex, hoverIndex);
+        newList = [...reorderedActive, ...completedItems];
+    }
+    updateStoreLists(storeId, { ...store.lists, regular: newList });
+  }, [stores, updateStoreLists]);
 
   return { stores, addStore, editStore, deleteStore, reorderStores, moveStoreOrder, addItem, toggleItem, deleteItem, renameItem, moveItem, moveItemOrder, reorderItems, isLoaded, iconComponents, icons, restoreOneOffItem };
 };

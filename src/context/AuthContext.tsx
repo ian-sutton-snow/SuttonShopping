@@ -1,26 +1,10 @@
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import type { User } from 'firebase/auth';
-
-// A mock user for local development
-const mockUser: User = {
-  uid: 'local-user-01',
-  displayName: 'Local User',
-  email: 'local@user.com',
-  emailVerified: true,
-  isAnonymous: false,
-  photoURL: 'https://placehold.co/100x100.png',
-  providerData: [],
-  metadata: {},
-  providerId: 'local',
-  tenantId: null,
-  delete: async () => {},
-  getIdToken: async () => '',
-  getIdTokenResult: async () => ({} as any),
-  reload: async () => {},
-  toJSON: () => ({}),
-};
+import { getAuth, onAuthStateChanged, signInWithPopup, signOut as firebaseSignOut } from 'firebase/auth';
+import { auth, googleProvider, isFirebaseConfigured } from '@/firebase/firebase';
+import FirebaseNotConfigured from '@/components/FirebaseNotConfigured';
 
 interface AuthContextType {
   user: User | null;
@@ -32,20 +16,46 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  // In our local-only mode, the user is always "signed in" with our mock user.
-  const [user] = useState<User | null>(mockUser);
-  const [isAuthLoaded] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
+  const [isAuthLoaded, setIsAuthLoaded] = useState(false);
 
-  // These functions do nothing in local-only mode.
+  useEffect(() => {
+    if (!isFirebaseConfigured) {
+      setIsAuthLoaded(true); // If Firebase is not configured, we stop here.
+      return;
+    }
+
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setIsAuthLoaded(true);
+    });
+
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
+  }, []);
+
   const signInWithGoogle = async () => {
-    console.log("signInWithGoogle called in local mode. No action taken.");
+    if (!isFirebaseConfigured) return;
+    try {
+      await signInWithPopup(auth, googleProvider);
+    } catch (error) {
+      console.error("Error signing in with Google: ", error);
+    }
   };
 
   const signOutUser = async () => {
-    console.log("signOut called in local mode. No action taken.");
-    // In a real local-only app, you might want to clear local storage here.
-    // For now, we'll keep the user logged in to avoid disruption.
+    if (!isFirebaseConfigured) return;
+    try {
+      await firebaseSignOut(auth);
+    } catch (error) {
+      console.error("Error signing out: ", error);
+    }
   };
+
+  // If Firebase keys are missing, render a message instead of the app
+  if (!isFirebaseConfigured) {
+    return <FirebaseNotConfigured />;
+  }
   
   return (
     <AuthContext.Provider value={{ user, signInWithGoogle, signOut: signOutUser, isAuthLoaded }}>

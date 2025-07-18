@@ -150,6 +150,21 @@ export default function StoreListClient() {
           </div>
         );
     }
+    
+    if (!user) {
+       return (
+        <div className="text-center py-20 bg-card rounded-lg shadow-sm border border-dashed">
+          <div className="flex justify-center mb-4">
+              <ShoppingBasket className="h-16 w-16 text-muted-foreground" />
+          </div>
+          <h2 className="text-2xl font-semibold text-gray-700">Welcome to Sutton Shopping!</h2>
+          <p className="text-muted-foreground mt-2 mb-6">Sign in to manage and sync your shopping lists across devices.</p>
+          <Button onClick={signInWithGoogle}>
+            <LogIn className="mr-2 h-4 w-4" /> Sign In with Google
+          </Button>
+        </div>
+      );
+    }
 
     if (stores.length > 0) {
       return (
@@ -237,34 +252,36 @@ export default function StoreListClient() {
       <main className="flex-1 container mx-auto p-4 md:p-8">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold font-headline text-gray-800">My Stores</h1>
-            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                <DialogTrigger asChild>
-                    <Button onClick={openAddDialog}>
-                        <Plus className="mr-2 h-4 w-4" /> Add Store
-                    </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px] p-4">
-                    <DialogHeader>
-                        <DialogTitle>Add a new store</DialogTitle>
-                        <DialogDescription>Enter a name and choose an icon for your new shopping list.</DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-2 py-2">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="name" className="text-right">Name</Label>
-                            <Input id="name" value={storeName} onChange={(e) => setStoreName(e.target.value)} className="col-span-3" autoFocus />
-                        </div>
-                        <div className="grid grid-cols-4 items-start gap-4">
-                            <Label className="text-right pt-2">Icon</Label>
-                            <div className="col-span-3">
-                                <IconPicker allIcons={icons} selectedIcon={storeIcon} onSelect={setStoreIcon} iconComponents={iconComponents} />
-                            </div>
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <Button onClick={handleAddStore}>Create Store</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            {user && (
+              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                  <DialogTrigger asChild>
+                      <Button onClick={openAddDialog}>
+                          <Plus className="mr-2 h-4 w-4" /> Add Store
+                      </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[425px] p-4">
+                      <DialogHeader>
+                          <DialogTitle>Add a new store</DialogTitle>
+                          <DialogDescription>Enter a name and choose an icon for your new shopping list.</DialogDescription>
+                      </DialogHeader>
+                      <div className="grid gap-2 py-2">
+                          <div className="grid grid-cols-4 items-center gap-4">
+                              <Label htmlFor="name" className="text-right">Name</Label>
+                              <Input id="name" value={storeName} onChange={(e) => setStoreName(e.target.value)} className="col-span-3" autoFocus />
+                          </div>
+                          <div className="grid grid-cols-4 items-start gap-4">
+                              <Label className="text-right pt-2">Icon</Label>
+                              <div className="col-span-3">
+                                  <IconPicker allIcons={icons} selectedIcon={storeIcon} onSelect={setStoreIcon} iconComponents={iconComponents} />
+                              </div>
+                          </div>
+                      </div>
+                      <DialogFooter>
+                          <Button onClick={handleAddStore}>Create Store</Button>
+                      </DialogFooter>
+                  </DialogContent>
+              </Dialog>
+            )}
         </div>
 
         {/* Edit Store Dialog */}
