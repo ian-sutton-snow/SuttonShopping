@@ -14,7 +14,6 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
-  type Firestore,
 } from 'firebase/firestore';
 
 export const icons = ['ShoppingCart', 'Store', 'Home', 'Car', 'Sprout', 'Shirt', 'Dumbbell', 'Wine', 'Bike', 'Gift', 'BookOpen', 'Check'];
@@ -34,23 +33,26 @@ export const iconComponents: { [key: string]: React.ComponentType<{ className?: 
 };
 
 export const useShoppingLists = () => {
-  const { user, firebaseServices } = useAuth();
+  const { user, firebaseServices, isAuthLoaded } = useAuth();
   const [stores, setStores] = useState<Store[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const db = firebaseServices?.db;
 
   useEffect(() => {
-    if (!user || !db) {
-      setStores([]);
-      // Set isLoaded to true only if we are not expecting a user or db connection.
-      // If we expect a user but don't have one yet, we should wait.
-      if (!user) {
-        setIsLoaded(true);
-      }
+    // Don't do anything until auth state is confirmed
+    if (!isAuthLoaded) {
+      setIsLoaded(false);
       return;
     }
 
-    setIsLoaded(false);
+    // If auth is loaded but there's no user or DB, we can show the UI
+    if (!user || !db) {
+      setStores([]);
+      setIsLoaded(true);
+      return;
+    }
+
+    // If we have a user and DB, set up the listener
     const storesCollectionRef = collection(db, 'users', user.uid, 'stores');
     const q = query(storesCollectionRef, orderBy('order', 'asc'));
 
@@ -63,11 +65,11 @@ export const useShoppingLists = () => {
       setIsLoaded(true);
     }, (error) => {
       console.error("Error fetching stores:", error);
-      setIsLoaded(true);
+      setIsLoaded(true); // Still finish loading even if there's an error
     });
 
     return () => unsubscribe();
-  }, [user, db]);
+  }, [user, db, isAuthLoaded]);
 
   const updateStoreLists = useCallback(async (storeId: string, newLists: { regular: Item[], oneOff: Item[] }) => {
       if (!user || !db) return;
