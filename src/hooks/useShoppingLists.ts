@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from 'react';
 import type { Store, Item } from '@/lib/types';
 import { Home, ShoppingCart, Store as StoreIcon, Car, Sprout, Shirt, Dumbbell, Wine, Bike, Gift, BookOpen, Check } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { getFirebase, isFirebaseConfigured } from '@/firebase/firebase';
 import { 
   collection, 
   doc, 
@@ -35,19 +34,10 @@ export const iconComponents: { [key: string]: React.ComponentType<{ className?: 
 };
 
 export const useShoppingLists = () => {
-  const { user } = useAuth();
+  const { user, firebaseServices } = useAuth();
   const [stores, setStores] = useState<Store[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
-  const [db, setDb] = useState<Firestore | null>(null);
-
-  useEffect(() => {
-    if (isFirebaseConfigured) {
-      const firebaseServices = getFirebase();
-      if (firebaseServices) {
-        setDb(firebaseServices.db);
-      }
-    }
-  }, []);
+  const db = firebaseServices?.db;
 
   useEffect(() => {
     if (!user || !db) {
@@ -60,6 +50,7 @@ export const useShoppingLists = () => {
       return;
     }
 
+    setIsLoaded(false);
     const storesCollectionRef = collection(db, 'users', user.uid, 'stores');
     const q = query(storesCollectionRef, orderBy('order', 'asc'));
 

@@ -1,13 +1,12 @@
-// This file configures the Firebase connection.
-// After these changes are applied, you MUST create a `.env.local` file
-// in the root of your project and add your Firebase project's configuration keys.
-// Your app will not connect to Firebase until you do.
+// This file now only defines the configuration and a type for Firebase services.
+// The actual initialization is handled inside AuthContext.tsx to ensure
+// it only runs on the client-side after configuration is confirmed.
 
-import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import type { FirebaseApp } from 'firebase/app';
+import type { Auth, GoogleAuthProvider } from 'firebase/auth';
+import type { Firestore } from 'firebase/firestore';
 
-const firebaseConfig = {
+export const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
@@ -22,40 +21,9 @@ export const isFirebaseConfigured =
   !!firebaseConfig.authDomain &&
   !!firebaseConfig.projectId;
 
-// Singleton instances
-let app: FirebaseApp;
-let auth: Auth;
-let db: Firestore;
-let googleProvider: GoogleAuthProvider;
-
-interface FirebaseServices {
-    app: FirebaseApp;
-    auth: Auth;
-    db: Firestore;
-    googleProvider: GoogleAuthProvider;
-}
-
-/**
- * Initializes Firebase services on-demand and returns them.
- * This prevents initialization errors when environment variables are not yet loaded.
- * @returns An object containing the initialized Firebase services, or null if not configured.
- */
-export function getFirebase(): FirebaseServices | null {
-  if (!isFirebaseConfigured) {
-    return null;
-  }
-
-  if (!getApps().length) {
-    app = initializeApp(firebaseConfig);
-    auth = getAuth(app);
-    db = getFirestore(app);
-    googleProvider = new GoogleAuthProvider();
-  } else {
-    app = getApp();
-    auth = getAuth(app);
-    db = getFirestore(app);
-    googleProvider = new GoogleAuthProvider();
-  }
-
-  return { app, auth, db, googleProvider };
+export interface FirebaseServices {
+  app: FirebaseApp;
+  auth: Auth;
+  db: Firestore;
+  googleProvider: GoogleAuthProvider;
 }
