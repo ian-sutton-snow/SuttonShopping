@@ -30,13 +30,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsAuthLoaded(true);
       return;
     }
+    
+    // Use the default firebaseapp.com domain for auth, as it's guaranteed to have the helper files.
+    // The actual running origin will be added to the authorized domains in the Firebase console.
+    const config = {
+        ...firebaseConfig,
+    };
 
-    const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+    const app = !getApps().length ? initializeApp(config) : getApp();
     const auth = getAuth(app);
     const db = getFirestore(app);
     const googleProvider = new GoogleAuthProvider();
 
-    const services: FirebaseServices = { app, auth, db, googleProvider, config: firebaseConfig };
+    const services: FirebaseServices = { app, auth, db, googleProvider, config: config };
     setFirebaseServices(services);
     
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
