@@ -31,16 +31,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    const config = {
-        ...firebaseConfig,
-    };
-
-    const app = !getApps().length ? initializeApp(config) : getApp();
+    const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
     const auth = getAuth(app);
     const db = getFirestore(app);
     const googleProvider = new GoogleAuthProvider();
 
-    const services: FirebaseServices = { app, auth, db, googleProvider, config: config };
+    const services: FirebaseServices = { app, auth, db, googleProvider, config: firebaseConfig };
     setFirebaseServices(services);
     
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
