@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import type { User } from 'firebase/auth';
-import { onAuthStateChanged, signInWithRedirect, signOut as firebaseSignOut, GoogleAuthProvider, getAuth } from 'firebase/auth';
+import { onAuthStateChanged, signInWithPopup, signOut as firebaseSignOut, GoogleAuthProvider, getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getApps, initializeApp, getApp, type FirebaseOptions } from 'firebase/app';
 import { isFirebaseConfigured, type FirebaseServices, firebaseConfig } from '@/firebase/firebase';
@@ -30,9 +30,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsAuthLoaded(true);
       return;
     }
-    
-    // Use the default firebaseapp.com domain for auth, as it's guaranteed to have the helper files.
-    // The actual running origin will be added to the authorized domains in the Firebase console.
+
     const config = {
         ...firebaseConfig,
     };
@@ -50,7 +48,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsAuthLoaded(true);
     });
     
-    // Cleanup subscription on unmount
     return () => unsubscribe();
   }, []);
 
@@ -61,7 +58,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const { auth, googleProvider, config } = firebaseServices;
       console.log('Browser origin:', window.location.origin);
       console.log('Attempting to sign in with this Firebase config:', config);
-      await signInWithRedirect(auth, googleProvider);
+      await signInWithPopup(auth, googleProvider);
     } catch (error: any) {
       console.error("Full sign-in error object:", error);
       toast({
