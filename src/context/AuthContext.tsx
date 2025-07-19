@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import type { User } from 'firebase/auth';
-import { onAuthStateChanged, signInWithPopup, signOut as firebaseSignOut, GoogleAuthProvider, getAuth } from 'firebase/auth';
+import { onAuthStateChanged, signInWithRedirect, signOut as firebaseSignOut, GoogleAuthProvider, getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getApps, initializeApp, getApp, type FirebaseOptions } from 'firebase/app';
 import { isFirebaseConfigured, type FirebaseServices, firebaseConfig } from '@/firebase/firebase';
@@ -61,7 +61,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const { auth, googleProvider, config } = firebaseServices;
       console.log('Browser origin:', window.location.origin);
       console.log('Attempting to sign in with this Firebase config:', config);
-      await signInWithPopup(auth, googleProvider);
+      await signInWithRedirect(auth, googleProvider);
     } catch (error: any) {
       console.error("Full sign-in error object:", error);
       toast({
