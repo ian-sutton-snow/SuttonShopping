@@ -51,12 +51,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (!firebaseServices) return;
 
     try {
-      const { auth, googleProvider, config } = firebaseServices;
-      console.log('Browser origin:', window.location.origin);
-      console.log('Attempting to sign in with this Firebase config:', config);
-      await signInWithPopup(auth, googleProvider);
+      await signInWithPopup(firebaseServices.auth, firebaseServices.googleProvider);
     } catch (error: any) {
-      console.error("Full sign-in error object:", error);
+      console.error("Sign-in error:", error.message);
       toast({
         variant: "destructive",
         title: "Sign-In Failed",
