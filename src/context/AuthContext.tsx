@@ -4,8 +4,8 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import type { User } from 'firebase/auth';
 import { onAuthStateChanged, signInWithPopup, signOut as firebaseSignOut, GoogleAuthProvider, getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
-import { getApps, initializeApp, getApp } from 'firebase/app';
-import { firebaseConfig, isFirebaseConfigured, type FirebaseServices } from '@/firebase/firebase';
+import { getApps, initializeApp, getApp, type FirebaseOptions } from 'firebase/app';
+import { isFirebaseConfigured, type FirebaseServices, firebaseConfig } from '@/firebase/firebase';
 import FirebaseNotConfigured from '@/components/FirebaseNotConfigured';
 import { useToast } from '@/hooks/use-toast';
 
@@ -36,7 +36,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const db = getFirestore(app);
     const googleProvider = new GoogleAuthProvider();
 
-    const services = { app, auth, db, googleProvider };
+    const services: FirebaseServices = { app, auth, db, googleProvider, config: firebaseConfig };
     setFirebaseServices(services);
     
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -52,7 +52,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (!firebaseServices) return;
 
     try {
-      const { auth, googleProvider } = firebaseServices;
+      const { auth, googleProvider, config } = firebaseServices;
+      console.log('Browser origin:', window.location.origin);
+      console.log('Attempting to sign in with this Firebase config:', config);
       await signInWithPopup(auth, googleProvider);
     } catch (error: any) {
       console.error("Full sign-in error object:", error);

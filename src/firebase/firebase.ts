@@ -1,16 +1,13 @@
-
 // This file now only defines the configuration and a type for Firebase services.
 // The actual initialization is handled inside AuthContext.tsx to ensure
 // it only runs on the client-side after configuration is confirmed.
 
-import type { FirebaseApp } from 'firebase/app';
+import type { FirebaseApp, FirebaseOptions } from 'firebase/app';
 import type { Auth, GoogleAuthProvider } from 'firebase/auth';
 import type { Firestore } from 'firebase/firestore';
 
 export const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  // This value MUST match the domain in your browser's address bar, and
-  // that domain must be added to the "Authorized domains" list in the Firebase console.
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
@@ -29,4 +26,5 @@ export interface FirebaseServices {
   auth: Auth;
   db: Firestore;
   googleProvider: GoogleAuthProvider;
+  config: FirebaseOptions;
 }
