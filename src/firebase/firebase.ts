@@ -9,8 +9,8 @@ import type { Firestore } from 'firebase/firestore';
 
 export const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  // Use the standard auth domain. The actual app's hosting domain must be added
-  // to the "Authorized domains" list in the Firebase console.
+  // This value MUST match the domain in your browser's address bar, and
+  // that domain must be added to the "Authorized domains" list in the Firebase console.
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
