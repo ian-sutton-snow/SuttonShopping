@@ -50,11 +50,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signInWithGoogle = async () => {
     if (!firebaseServices) return;
+
+    // --- DIAGNOSTIC LOGGING ---
+    console.log("Attempting to sign in with this Firebase config:", firebaseConfig);
+    // -------------------------
+
     try {
       const { auth, googleProvider } = firebaseServices;
       await signInWithPopup(auth, googleProvider);
     } catch (error: any) {
-      console.error("Error signing in with Google: ", error);
+      console.error("Full sign-in error object:", error);
       toast({
         variant: "destructive",
         title: "Sign-In Failed",
