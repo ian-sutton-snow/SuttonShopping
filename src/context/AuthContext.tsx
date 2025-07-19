@@ -7,6 +7,7 @@ import { getFirestore } from 'firebase/firestore';
 import { getApps, initializeApp, getApp } from 'firebase/app';
 import { firebaseConfig, isFirebaseConfigured, type FirebaseServices } from '@/firebase/firebase';
 import FirebaseNotConfigured from '@/components/FirebaseNotConfigured';
+import { useToast } from '@/hooks/use-toast';
 
 interface AuthContextType {
   user: User | null;
@@ -22,6 +23,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthLoaded, setIsAuthLoaded] = useState(false);
   const [firebaseServices, setFirebaseServices] = useState<FirebaseServices | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!isFirebaseConfigured) {
@@ -51,8 +53,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const { auth, googleProvider } = firebaseServices;
       await signInWithPopup(auth, googleProvider);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error signing in with Google: ", error);
+      toast({
+        variant: "destructive",
+        title: "Sign-In Failed",
+        description: error.message || "An unknown error occurred.",
+      });
     }
   };
 
