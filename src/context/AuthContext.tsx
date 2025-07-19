@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import type { User } from 'firebase/auth';
 import { onAuthStateChanged, signInWithPopup, signOut as firebaseSignOut } from 'firebase/auth';
-import { auth, googleProvider, isFirebaseConfigured } from '@/firebase/firebase';
+import { getFirebase, isFirebaseConfigured } from '@/firebase/firebase';
 import FirebaseNotConfigured from '@/components/FirebaseNotConfigured';
 
 interface AuthContextType {
@@ -21,22 +21,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (!isFirebaseConfigured) {
-      setIsAuthLoaded(true); // If Firebase is not configured, we stop here.
+      setIsAuthLoaded(true); // Stop if Firebase is not configured.
       return;
     }
 
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setIsAuthLoaded(true);
-    });
-
-    // Cleanup subscription on unmount
-    return () => unsubscribe();
+    const firebaseServices = getFirebase();
+    if (firebaseServices) {
+      const { auth } = firebaseServices;
+      const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+        setUser(currentUser);
+        setIsAuthLoaded(true);
+      });
+      // Cleanup subscription on unmount
+      return () => unsubscribe();
+    }
   }, []);
 
   const signInWithGoogle = async () => {
-    if (!isFirebaseConfigured) return;
+    const firebaseServices = getFirebase();
+    if (!firebaseServices) return;
     try {
+      const { auth, googleProvider } = firebaseServices;
       await signInWithPopup(auth, googleProvider);
     } catch (error) {
       console.error("Error signing in with Google: ", error);
@@ -44,8 +49,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signOutUser = async () => {
-    if (!isFirebaseConfigured) return;
+    const firebaseServices = getFirebase();
+    if (!firebaseServices) return;
     try {
+      const { auth } = firebaseServices;
       await firebaseSignOut(auth);
     } catch (error) {
       console.error("Error signing out: ", error);

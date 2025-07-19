@@ -3,7 +3,7 @@
 // in the root of your project and add your Firebase project's configuration keys.
 // Your app will not connect to Firebase until you do.
 
-import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
+import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 
@@ -22,31 +22,40 @@ export const isFirebaseConfigured =
   !!firebaseConfig.authDomain &&
   !!firebaseConfig.projectId;
 
+// Singleton instances
 let app: FirebaseApp;
 let auth: Auth;
 let db: Firestore;
 let googleProvider: GoogleAuthProvider;
 
-// Initialize Firebase only if it's configured and not already initialized.
-if (isFirebaseConfigured && !getApps().length) {
-  app = initializeApp(firebaseConfig);
-  auth = getAuth(app);
-  db = getFirestore(app);
-  googleProvider = new GoogleAuthProvider();
-} else if (getApps().length) {
-  // If already initialized, get the instances.
-  app = getApps()[0];
-  auth = getAuth(app);
-  db = getFirestore(app);
-  googleProvider = new GoogleAuthProvider();
-} else {
-  // If not configured, set to null and the app will show a configuration message.
-  // This helps avoid runtime errors.
-  app = null as any;
-  auth = null as any;
-  db = null as any;
-  googleProvider = null as any;
+interface FirebaseServices {
+    app: FirebaseApp;
+    auth: Auth;
+    db: Firestore;
+    googleProvider: GoogleAuthProvider;
 }
 
+/**
+ * Initializes Firebase services on-demand and returns them.
+ * This prevents initialization errors when environment variables are not yet loaded.
+ * @returns An object containing the initialized Firebase services, or null if not configured.
+ */
+export function getFirebase(): FirebaseServices | null {
+  if (!isFirebaseConfigured) {
+    return null;
+  }
 
-export { app, auth, db, googleProvider };
+  if (!getApps().length) {
+    app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
+    googleProvider = new GoogleAuthProvider();
+  } else {
+    app = getApp();
+    auth = getAuth(app);
+    db = getFirestore(app);
+    googleProvider = new GoogleAuthProvider();
+  }
+
+  return { app, auth, db, googleProvider };
+}

@@ -4,18 +4,18 @@ import { useState, useEffect, useCallback } from 'react';
 import type { Store, Item } from '@/lib/types';
 import { Home, ShoppingCart, Store as StoreIcon, Car, Sprout, Shirt, Dumbbell, Wine, Bike, Gift, BookOpen, Check } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { db } from '@/firebase/firebase';
+import { getFirebase, isFirebaseConfigured } from '@/firebase/firebase';
 import { 
   collection, 
   doc, 
   onSnapshot, 
-  setDoc, 
-  deleteDoc, 
   writeBatch,
   query,
   orderBy,
   addDoc,
   updateDoc,
+  deleteDoc,
+  type Firestore,
 } from 'firebase/firestore';
 
 export const icons = ['ShoppingCart', 'Store', 'Home', 'Car', 'Sprout', 'Shirt', 'Dumbbell', 'Wine', 'Bike', 'Gift', 'BookOpen', 'Check'];
@@ -38,11 +38,25 @@ export const useShoppingLists = () => {
   const { user } = useAuth();
   const [stores, setStores] = useState<Store[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [db, setDb] = useState<Firestore | null>(null);
 
   useEffect(() => {
-    if (!user) {
+    if (isFirebaseConfigured) {
+      const firebaseServices = getFirebase();
+      if (firebaseServices) {
+        setDb(firebaseServices.db);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!user || !db) {
       setStores([]);
-      setIsLoaded(true);
+      // Set isLoaded to true only if we are not expecting a user or db connection.
+      // If we expect a user but don't have one yet, we should wait.
+      if (!user) {
+        setIsLoaded(true);
+      }
       return;
     }
 
@@ -62,10 +76,16 @@ export const useShoppingLists = () => {
     });
 
     return () => unsubscribe();
-  }, [user]);
+  }, [user, db]);
+
+  const updateStoreLists = useCallback(async (storeId: string, newLists: { regular: Item[], oneOff: Item[] }) => {
+      if (!user || !db) return;
+      const storeRef = doc(db, 'users', user.uid, 'stores', storeId);
+      await updateDoc(storeRef, { lists: newLists });
+  }, [user, db]);
 
   const addStore = useCallback(async (name: string, icon: string) => {
-    if (!user) return;
+    if (!user || !db) return;
     const newOrder = stores.length;
     await addDoc(collection(db, 'users', user.uid, 'stores'), {
       name,
@@ -73,23 +93,22 @@ export const useShoppingLists = () => {
       lists: { regular: [], oneOff: [] },
       order: newOrder,
     });
-  }, [user, stores.length]);
+  }, [user, db, stores.length]);
   
   const editStore = useCallback(async (storeId: string, newName: string, newIcon: string) => {
-    if (!user) return;
+    if (!user || !db) return;
     const storeRef = doc(db, 'users', user.uid, 'stores', storeId);
     await updateDoc(storeRef, { name: newName, icon: newIcon });
-  }, [user]);
+  }, [user, db]);
 
   const deleteStore = useCallback(async (storeId: string) => {
-    if (!user) return;
+    if (!user || !db) return;
     const storeRef = doc(db, 'users', user.uid, 'stores', storeId);
     await deleteDoc(storeRef);
-    // Note: Re-ordering other stores is handled via a cloud function or needs manual adjustment here
-  }, [user]);
+  }, [user, db]);
 
   const reorderStores = useCallback(async (dragIndex: number, hoverIndex: number) => {
-    if (!user) return;
+    if (!user || !db) return;
     
     const newStores = [...stores];
     const [draggedItem] = newStores.splice(dragIndex, 1);
@@ -102,10 +121,10 @@ export const useShoppingLists = () => {
     });
     
     await batch.commit();
-  }, [user, stores]);
+  }, [user, db, stores]);
   
   const moveStoreOrder = useCallback(async (storeId: string, direction: 'up' | 'down') => {
-    if (!user) return;
+    if (!user || !db) return;
     const storeIndex = stores.findIndex(s => s.id === storeId);
     if (storeIndex === -1) return;
 
@@ -113,13 +132,7 @@ export const useShoppingLists = () => {
     if (newIndex < 0 || newIndex >= stores.length) return;
 
     await reorderStores(storeIndex, newIndex);
-  }, [user, stores, reorderStores]);
-
-  const updateStoreLists = useCallback(async (storeId: string, newLists: { regular: Item[], oneOff: Item[] }) => {
-      if (!user) return;
-      const storeRef = doc(db, 'users', user.uid, 'stores', storeId);
-      await updateDoc(storeRef, { lists: newLists });
-  }, [user]);
+  }, [user, db, stores, reorderStores]);
   
   const addItem = useCallback((storeId: string, listType: 'regular' | 'oneOff', text: string) => {
     const store = stores.find(s => s.id === storeId);
