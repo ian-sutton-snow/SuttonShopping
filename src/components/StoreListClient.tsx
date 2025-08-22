@@ -172,6 +172,7 @@ export default function StoreListClient() {
           {stores.map((store, index) => {
             const Icon = iconComponents[store.icon];
             const totalItems = store.lists.regular.length + store.lists.oneOff.length;
+            const pendingItems = store.lists.regular.filter(item => !item.completed).length + store.lists.oneOff.length;
             const canMoveUp = index > 0;
             const canMoveDown = index < stores.length - 1;
             return (
@@ -191,7 +192,10 @@ export default function StoreListClient() {
                           <CardTitle className="font-headline text-xl">{store.name}</CardTitle>
                       </CardHeader>
                       <CardContent className="flex-grow">
-                          <p className="text-sm text-muted-foreground">{totalItems} items</p>
+                        <p className="text-sm text-muted-foreground">
+                          {totalItems} {totalItems === 1 ? 'item' : 'items'}
+                          {pendingItems > 0 && ` (${pendingItems} pending)`}
+                        </p>
                       </CardContent>
                   </Link>
 
