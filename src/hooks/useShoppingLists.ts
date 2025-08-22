@@ -1,8 +1,9 @@
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import type { Store, Item } from '@/lib/types';
-import { Home, ShoppingCart, Store as StoreIcon, Car, Sprout, Shirt, Dumbbell, Wine, Bike, Gift, BookOpen, Check } from 'lucide-react';
+import { Home, ShoppingCart, Sprout, Shirt, Dumbbell, Wine, Bike, Gift, BookOpen, Check, Hammer, Computer } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { 
   collection, 
@@ -17,12 +18,12 @@ import {
   Firestore,
 } from 'firebase/firestore';
 
-export const icons = ['ShoppingCart', 'Store', 'Home', 'Car', 'Sprout', 'Shirt', 'Dumbbell', 'Wine', 'Bike', 'Gift', 'BookOpen', 'Check'];
+export const icons = ['ShoppingCart', 'Hammer', 'Home', 'Computer', 'Sprout', 'Shirt', 'Dumbbell', 'Wine', 'Bike', 'Gift', 'BookOpen', 'Check'];
 export const iconComponents: { [key: string]: React.ComponentType<{ className?: string }> } = {
   ShoppingCart,
-  Store: StoreIcon,
+  Hammer,
   Home,
-  Car,
+  Computer,
   Sprout,
   Shirt,
   Dumbbell,
