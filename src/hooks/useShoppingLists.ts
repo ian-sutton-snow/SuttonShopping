@@ -33,43 +33,39 @@ export const iconComponents: { [key: string]: React.ComponentType<{ className?: 
 };
 
 export const useShoppingLists = () => {
-  const { user, firebaseServices, isAuthLoaded } = useAuth();
+  const { user, firebaseServices } = useAuth();
   const [stores, setStores] = useState<Store[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const db = firebaseServices?.db;
 
   useEffect(() => {
-    // Don't do anything until auth state is confirmed
-    if (!isAuthLoaded) {
-      setIsLoaded(false);
-      return;
-    }
+    // If we have a user and a database connection, set up the listener.
+    if (user && db) {
+      const storesCollectionRef = collection(db, 'users', user.uid, 'stores');
+      const q = query(storesCollectionRef, orderBy('order', 'asc'));
 
-    // If auth is loaded but there's no user or DB, we can show the UI
-    if (!user || !db) {
-      setStores([]);
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const storesData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        } as Store));
+        setStores(storesData);
+        setIsLoaded(true);
+      }, (error) => {
+        console.error("Error fetching stores:", error);
+        setIsLoaded(true); // Still finish loading even if there's an error
+      });
+
+      // Cleanup the listener when the component unmounts or user changes.
+      return () => unsubscribe();
+    } else if (!user) {
+      // If there's no user, we are not loading data from the server.
+      // We can consider the "loading" phase complete.
+      setStores([]); // Clear any previous user's data
       setIsLoaded(true);
-      return;
     }
-
-    // If we have a user and DB, set up the listener
-    const storesCollectionRef = collection(db, 'users', user.uid, 'stores');
-    const q = query(storesCollectionRef, orderBy('order', 'asc'));
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const storesData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as Store));
-      setStores(storesData);
-      setIsLoaded(true);
-    }, (error) => {
-      console.error("Error fetching stores:", error);
-      setIsLoaded(true); // Still finish loading even if there's an error
-    });
-
-    return () => unsubscribe();
-  }, [user, db, isAuthLoaded]);
+    // Note: If there's a user but no db, we wait. `isLoaded` remains false.
+  }, [user, db]);
 
   const updateStoreLists = useCallback(async (storeId: string, newLists: { regular: Item[], oneOff: Item[] }) => {
       if (!user || !db) return;
@@ -98,7 +94,19 @@ export const useShoppingLists = () => {
     if (!user || !db) return;
     const storeRef = doc(db, 'users', user.uid, 'stores', storeId);
     await deleteDoc(storeRef);
-  }, [user, db]);
+    // Note: The onSnapshot listener will automatically update the UI.
+    // We may want to re-order the remaining items if order is important after a delete.
+    const remainingStores = stores.filter(s => s.id !== storeId);
+    const batch = writeBatch(db);
+    remainingStores.forEach((store, index) => {
+        if (store.order !== index) {
+            const storeRef = doc(db, 'users', user.uid, 'stores', store.id);
+            batch.update(storeRef, { order: index });
+        }
+    });
+    await batch.commit();
+
+  }, [user, db, stores]);
 
   const reorderStores = useCallback(async (dragIndex: number, hoverIndex: number) => {
     if (!user || !db) return;
