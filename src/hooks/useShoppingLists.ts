@@ -14,6 +14,7 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
+  Firestore,
 } from 'firebase/firestore';
 
 export const icons = ['ShoppingCart', 'Store', 'Home', 'Car', 'Sprout', 'Shirt', 'Dumbbell', 'Wine', 'Bike', 'Gift', 'BookOpen', 'Check'];
@@ -33,14 +34,26 @@ export const iconComponents: { [key: string]: React.ComponentType<{ className?: 
 };
 
 export const useShoppingLists = () => {
-  const { user, firebaseServices } = useAuth();
+  const { user, firebaseServices, isAuthLoaded } = useAuth();
   const [stores, setStores] = useState<Store[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
-  const db = firebaseServices?.db;
+  const [db, setDb] = useState<Firestore | null>(null);
 
   useEffect(() => {
-    // If we have a user and a database connection, set up the listener.
+    if (firebaseServices) {
+      setDb(firebaseServices.db);
+    }
+  }, [firebaseServices]);
+
+  useEffect(() => {
+    if (!isAuthLoaded) {
+        // Authentication is not yet resolved, so we are not loaded.
+        setIsLoaded(false);
+        return;
+    }
+
     if (user && db) {
+      // If we have a user and a database connection, set up the listener.
       const storesCollectionRef = collection(db, 'users', user.uid, 'stores');
       const q = query(storesCollectionRef, orderBy('order', 'asc'));
 
@@ -50,10 +63,12 @@ export const useShoppingLists = () => {
           ...doc.data()
         } as Store));
         setStores(storesData);
-        setIsLoaded(true);
+        // We have received the first batch of data, so we are now "loaded".
+        setIsLoaded(true); 
       }, (error) => {
         console.error("Error fetching stores:", error);
-        setIsLoaded(true); // Still finish loading even if there's an error
+        // Finish loading even if there's an error to not block the UI.
+        setIsLoaded(true);
       });
 
       // Cleanup the listener when the component unmounts or user changes.
@@ -64,8 +79,7 @@ export const useShoppingLists = () => {
       setStores([]); // Clear any previous user's data
       setIsLoaded(true);
     }
-    // Note: If there's a user but no db, we wait. `isLoaded` remains false.
-  }, [user, db]);
+  }, [user, db, isAuthLoaded]);
 
   const updateStoreLists = useCallback(async (storeId: string, newLists: { regular: Item[], oneOff: Item[] }) => {
       if (!user || !db) return;
@@ -94,8 +108,7 @@ export const useShoppingLists = () => {
     if (!user || !db) return;
     const storeRef = doc(db, 'users', user.uid, 'stores', storeId);
     await deleteDoc(storeRef);
-    // Note: The onSnapshot listener will automatically update the UI.
-    // We may want to re-order the remaining items if order is important after a delete.
+    
     const remainingStores = stores.filter(s => s.id !== storeId);
     const batch = writeBatch(db);
     remainingStores.forEach((store, index) => {
@@ -137,18 +150,18 @@ export const useShoppingLists = () => {
   
   const addItem = useCallback((storeId: string, listType: 'regular' | 'oneOff', text: string) => {
     const store = stores.find(s => s.id === storeId);
-    if (!store) return;
+    if (!store || !db) return;
     const newItem: Item = { id: crypto.randomUUID(), text, completed: false };
     const newLists = {
       ...store.lists,
       [listType]: [newItem, ...store.lists[listType]],
     };
     updateStoreLists(storeId, newLists);
-  }, [stores, updateStoreLists]);
+  }, [stores, updateStoreLists, db]);
 
   const toggleItem = useCallback((storeId: string, listType: 'regular' | 'oneOff', itemId: string) => {
     const store = stores.find(s => s.id === storeId);
-    if (!store) return;
+    if (!store || !db) return;
 
     const newLists = { ...store.lists };
     if (listType === 'oneOff') {
@@ -159,22 +172,22 @@ export const useShoppingLists = () => {
       );
     }
     updateStoreLists(storeId, newLists);
-  }, [stores, updateStoreLists]);
+  }, [stores, updateStoreLists, db]);
 
   const restoreOneOffItem = useCallback((storeId: string, item: Item) => {
     const store = stores.find(s => s.id === storeId);
-    if (!store) return;
+    if (!store || !db) return;
     const newLists = { ...store.lists };
     const itemExists = newLists.oneOff.some(i => i.id === item.id);
     if (!itemExists) {
       newLists.oneOff = [item, ...newLists.oneOff];
     }
     updateStoreLists(storeId, newLists);
-  }, [stores, updateStoreLists]);
+  }, [stores, updateStoreLists, db]);
   
   const deleteItem = useCallback((storeId: string, listType: 'regular' | 'oneOff', itemId: string) => {
     const store = stores.find(s => s.id === storeId);
-    if (!store) return;
+    if (!store || !db) return;
 
     const list = store.lists[listType].filter(item => item.id !== itemId);
     const newLists = {
@@ -182,11 +195,11 @@ export const useShoppingLists = () => {
       [listType]: list,
     };
     updateStoreLists(storeId, newLists);
-  }, [stores, updateStoreLists]);
+  }, [stores, updateStoreLists, db]);
 
   const renameItem = useCallback((storeId: string, listType: 'regular' | 'oneOff', itemId: string, newText: string) => {
     const store = stores.find(s => s.id === storeId);
-    if (!store) return;
+    if (!store || !db) return;
     const list = store.lists[listType].map(item => 
       item.id === itemId ? { ...item, text: newText } : item
     );
@@ -195,11 +208,11 @@ export const useShoppingLists = () => {
       [listType]: list,
     };
     updateStoreLists(storeId, newLists);
-  }, [stores, updateStoreLists]);
+  }, [stores, updateStoreLists, db]);
 
   const moveItem = useCallback((storeId: string, itemId: string) => {
     const store = stores.find(s => s.id === storeId);
-    if (!store) return;
+    if (!store || !db) return;
 
     let itemToMove: Item | undefined;
     let sourceList: 'regular' | 'oneOff' | null = null;
@@ -226,7 +239,7 @@ export const useShoppingLists = () => {
       [destinationList]: updatedDestinationList,
     };
     updateStoreLists(storeId, newLists);
-  }, [stores, updateStoreLists]);
+  }, [stores, updateStoreLists, db]);
 
   const reorderList = (list: Item[], dragIndex: number, hoverIndex: number) => {
     const reorderedList = [...list];
@@ -237,7 +250,7 @@ export const useShoppingLists = () => {
   
   const moveItemOrder = useCallback((storeId: string, itemId: string, direction: 'up' | 'down') => {
     const store = stores.find(s => s.id === storeId);
-    if (!store) return;
+    if (!store || !db) return;
 
     let listType: 'regular' | 'oneOff' | null = null;
     let isCompleted = false;
@@ -270,11 +283,11 @@ export const useShoppingLists = () => {
         newLists = {...store.lists, regular: finalRegularList};
     }
     updateStoreLists(storeId, newLists);
-  }, [stores, updateStoreLists]);
+  }, [stores, updateStoreLists, db]);
 
   const reorderItems = useCallback((storeId: string, listType: 'regular' | 'oneOff', isCompletedList: boolean, dragIndex: number, hoverIndex: number) => {
     const store = stores.find(s => s.id === storeId);
-    if (!store) return;
+    if (!store || !db) return;
 
     if (listType === 'oneOff') {
       const newOneOffList = reorderList(store.lists.oneOff, dragIndex, hoverIndex);
@@ -294,7 +307,7 @@ export const useShoppingLists = () => {
         newList = [...reorderedActive, ...completedItems];
     }
     updateStoreLists(storeId, { ...store.lists, regular: newList });
-  }, [stores, updateStoreLists]);
+  }, [stores, updateStoreLists, db]);
 
   return { stores, addStore, editStore, deleteStore, reorderStores, moveStoreOrder, addItem, toggleItem, deleteItem, renameItem, moveItem, moveItemOrder, reorderItems, isLoaded, iconComponents, icons, restoreOneOffItem };
 };
