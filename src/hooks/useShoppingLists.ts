@@ -14,6 +14,7 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
+  Firestore,
 } from 'firebase/firestore';
 
 export const icons = ['ShoppingCart', 'Store', 'Home', 'Car', 'Sprout', 'Shirt', 'Dumbbell', 'Wine', 'Bike', 'Gift', 'BookOpen', 'Check'];
@@ -42,26 +43,27 @@ export const useShoppingLists = () => {
       setIsLoaded(false);
       return;
     }
-
+  
     if (user && firebaseServices?.db) {
       const db = firebaseServices.db;
       const storesCollectionRef = collection(db, 'users', user.uid, 'stores');
       const q = query(storesCollectionRef, orderBy('order', 'asc'));
-
+  
       const unsubscribe = onSnapshot(q, (snapshot) => {
         const storesData = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         } as Store));
         setStores(storesData);
-        setIsLoaded(true); 
+        setIsLoaded(true);
       }, (error) => {
         console.error("Error fetching stores:", error);
-        setIsLoaded(true);
+        setIsLoaded(true); // Set loaded even on error to prevent infinite loading
       });
-
+  
       return () => unsubscribe();
-    } else if (!user) {
+    } else {
+      // Not logged in, so no data to fetch
       setStores([]);
       setIsLoaded(true);
     }
@@ -82,7 +84,7 @@ export const useShoppingLists = () => {
       lists: { regular: [], oneOff: [] },
       order: newOrder,
     });
-  }, [user, firebaseServices, stores.length]);
+  }, [user, firebaseServices, stores]);
   
   const editStore = useCallback(async (storeId: string, newName: string, newIcon: string) => {
     if (!user || !firebaseServices?.db) return;
