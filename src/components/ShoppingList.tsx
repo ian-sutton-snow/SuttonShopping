@@ -4,7 +4,7 @@ import * as React from 'react';
 import { Item } from '@/lib/types';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
-import { Plus, GripVertical, MoreHorizontal, Pencil, Trash2, ArrowRightLeft, MoveUp, MoveDown } from 'lucide-react';
+import { Plus, GripVertical, MoreHorizontal, Pencil, Trash2, ArrowRightLeft, MoveUp, MoveDown, SortAsc } from 'lucide-react';
 import { Card, CardContent } from './ui/card';
 import { Checkbox } from './ui/checkbox';
 import { cn } from '@/lib/utils';
@@ -28,6 +28,7 @@ interface ShoppingListProps {
   onMoveItem: (itemId: string) => void;
   onMoveItemOrder: (itemId: string, direction: 'up' | 'down') => void;
   onReorderItems: (isCompletedList: boolean, dragIndex: number, hoverIndex: number) => void;
+  onSortCompletedItems: () => void;
   isSideBySide?: boolean;
 }
 
@@ -42,6 +43,7 @@ export default function ShoppingList({
   onMoveItem,
   onMoveItemOrder,
   onReorderItems,
+  onSortCompletedItems,
   isSideBySide = false,
 }: ShoppingListProps) {
   const [newItemText, setNewItemText] = React.useState('');
@@ -277,7 +279,13 @@ export default function ShoppingList({
             ) : (
               <>
                 <Separator className="my-6" />
-                <h3 className="text-sm font-medium text-muted-foreground mb-4">Completed ({completedItems.length})</h3>
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-sm font-medium text-muted-foreground">Completed ({completedItems.length})</h3>
+                  <Button variant="ghost" size="sm" onClick={onSortCompletedItems}>
+                    <SortAsc className="mr-2 h-4 w-4" />
+                    Sort A-Z
+                  </Button>
+                </div>
                 {renderItemList(completedItems, true)}
               </>
             )

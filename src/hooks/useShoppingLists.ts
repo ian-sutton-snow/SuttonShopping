@@ -59,12 +59,11 @@ export const useShoppingLists = () => {
         setIsLoaded(true);
       }, (error) => {
         console.error("Error fetching stores:", error);
-        setIsLoaded(true); // Set loaded even on error to prevent infinite loading
+        setIsLoaded(true);
       });
   
       return () => unsubscribe();
     } else {
-      // Not logged in, so no data to fetch
       setStores([]);
       setIsLoaded(true);
     }
@@ -297,5 +296,19 @@ export const useShoppingLists = () => {
     updateStoreLists(storeId, { ...store.lists, regular: newList });
   }, [stores, updateStoreLists]);
 
-  return { stores, addStore, editStore, deleteStore, reorderStores, moveStoreOrder, addItem, toggleItem, deleteItem, renameItem, moveItem, moveItemOrder, reorderItems, isLoaded, iconComponents, icons, restoreOneOffItem };
+  const sortCompletedItems = useCallback((storeId: string) => {
+    const store = stores.find(s => s.id === storeId);
+    if (!store) return;
+    
+    const activeItems = store.lists.regular.filter(i => !i.completed);
+    const completedItems = store.lists.regular.filter(i => i.completed);
+
+    const sortedCompleted = [...completedItems].sort((a, b) => a.text.localeCompare(b.text));
+
+    const newRegularList = [...activeItems, ...sortedCompleted];
+    
+    updateStoreLists(storeId, { ...store.lists, regular: newRegularList });
+  }, [stores, updateStoreLists]);
+
+  return { stores, addStore, editStore, deleteStore, reorderStores, moveStoreOrder, addItem, toggleItem, deleteItem, renameItem, moveItem, moveItemOrder, reorderItems, isLoaded, iconComponents, icons, restoreOneOffItem, sortCompletedItems };
 };
