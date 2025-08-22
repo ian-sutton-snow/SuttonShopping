@@ -14,7 +14,6 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
-  Firestore,
 } from 'firebase/firestore';
 
 export const icons = ['ShoppingCart', 'Store', 'Home', 'Car', 'Sprout', 'Shirt', 'Dumbbell', 'Wine', 'Bike', 'Gift', 'BookOpen', 'Check'];
@@ -37,23 +36,15 @@ export const useShoppingLists = () => {
   const { user, firebaseServices, isAuthLoaded } = useAuth();
   const [stores, setStores] = useState<Store[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
-  const [db, setDb] = useState<Firestore | null>(null);
-
-  useEffect(() => {
-    if (firebaseServices) {
-      setDb(firebaseServices.db);
-    }
-  }, [firebaseServices]);
 
   useEffect(() => {
     if (!isAuthLoaded) {
-        // Authentication is not yet resolved, so we are not loaded.
-        setIsLoaded(false);
-        return;
+      setIsLoaded(false);
+      return;
     }
 
-    if (user && db) {
-      // If we have a user and a database connection, set up the listener.
+    if (user && firebaseServices?.db) {
+      const db = firebaseServices.db;
       const storesCollectionRef = collection(db, 'users', user.uid, 'stores');
       const q = query(storesCollectionRef, orderBy('order', 'asc'));
 
@@ -63,82 +54,76 @@ export const useShoppingLists = () => {
           ...doc.data()
         } as Store));
         setStores(storesData);
-        // We have received the first batch of data, so we are now "loaded".
         setIsLoaded(true); 
       }, (error) => {
         console.error("Error fetching stores:", error);
-        // Finish loading even if there's an error to not block the UI.
         setIsLoaded(true);
       });
 
-      // Cleanup the listener when the component unmounts or user changes.
       return () => unsubscribe();
     } else if (!user) {
-      // If there's no user, we are not loading data from the server.
-      // We can consider the "loading" phase complete.
-      setStores([]); // Clear any previous user's data
+      setStores([]);
       setIsLoaded(true);
     }
-  }, [user, db, isAuthLoaded]);
+  }, [user, firebaseServices, isAuthLoaded]);
 
   const updateStoreLists = useCallback(async (storeId: string, newLists: { regular: Item[], oneOff: Item[] }) => {
-      if (!user || !db) return;
-      const storeRef = doc(db, 'users', user.uid, 'stores', storeId);
+      if (!user || !firebaseServices?.db) return;
+      const storeRef = doc(firebaseServices.db, 'users', user.uid, 'stores', storeId);
       await updateDoc(storeRef, { lists: newLists });
-  }, [user, db]);
+  }, [user, firebaseServices]);
 
   const addStore = useCallback(async (name: string, icon: string) => {
-    if (!user || !db) return;
+    if (!user || !firebaseServices?.db) return;
     const newOrder = stores.length;
-    await addDoc(collection(db, 'users', user.uid, 'stores'), {
+    await addDoc(collection(firebaseServices.db, 'users', user.uid, 'stores'), {
       name,
       icon: icon || icons[0],
       lists: { regular: [], oneOff: [] },
       order: newOrder,
     });
-  }, [user, db, stores.length]);
+  }, [user, firebaseServices, stores.length]);
   
   const editStore = useCallback(async (storeId: string, newName: string, newIcon: string) => {
-    if (!user || !db) return;
-    const storeRef = doc(db, 'users', user.uid, 'stores', storeId);
+    if (!user || !firebaseServices?.db) return;
+    const storeRef = doc(firebaseServices.db, 'users', user.uid, 'stores', storeId);
     await updateDoc(storeRef, { name: newName, icon: newIcon });
-  }, [user, db]);
+  }, [user, firebaseServices]);
 
   const deleteStore = useCallback(async (storeId: string) => {
-    if (!user || !db) return;
-    const storeRef = doc(db, 'users', user.uid, 'stores', storeId);
+    if (!user || !firebaseServices?.db) return;
+    const storeRef = doc(firebaseServices.db, 'users', user.uid, 'stores', storeId);
     await deleteDoc(storeRef);
     
     const remainingStores = stores.filter(s => s.id !== storeId);
-    const batch = writeBatch(db);
+    const batch = writeBatch(firebaseServices.db);
     remainingStores.forEach((store, index) => {
         if (store.order !== index) {
-            const storeRef = doc(db, 'users', user.uid, 'stores', store.id);
+            const storeRef = doc(firebaseServices.db, 'users', user.uid, 'stores', store.id);
             batch.update(storeRef, { order: index });
         }
     });
     await batch.commit();
 
-  }, [user, db, stores]);
+  }, [user, firebaseServices, stores]);
 
   const reorderStores = useCallback(async (dragIndex: number, hoverIndex: number) => {
-    if (!user || !db) return;
+    if (!user || !firebaseServices?.db) return;
     
     const newStores = [...stores];
     const [draggedItem] = newStores.splice(dragIndex, 1);
     newStores.splice(hoverIndex, 0, draggedItem);
     
-    const batch = writeBatch(db);
+    const batch = writeBatch(firebaseServices.db);
     newStores.forEach((store, index) => {
-      const storeRef = doc(db, 'users', user.uid, 'stores', store.id);
+      const storeRef = doc(firebaseServices.db, 'users', user.uid, 'stores', store.id);
       batch.update(storeRef, { order: index });
     });
     
     await batch.commit();
-  }, [user, db, stores]);
+  }, [user, firebaseServices, stores]);
   
   const moveStoreOrder = useCallback(async (storeId: string, direction: 'up' | 'down') => {
-    if (!user || !db) return;
     const storeIndex = stores.findIndex(s => s.id === storeId);
     if (storeIndex === -1) return;
 
@@ -146,22 +131,22 @@ export const useShoppingLists = () => {
     if (newIndex < 0 || newIndex >= stores.length) return;
 
     await reorderStores(storeIndex, newIndex);
-  }, [user, db, stores, reorderStores]);
+  }, [stores, reorderStores]);
   
   const addItem = useCallback((storeId: string, listType: 'regular' | 'oneOff', text: string) => {
     const store = stores.find(s => s.id === storeId);
-    if (!store || !db) return;
+    if (!store) return;
     const newItem: Item = { id: crypto.randomUUID(), text, completed: false };
     const newLists = {
       ...store.lists,
       [listType]: [newItem, ...store.lists[listType]],
     };
     updateStoreLists(storeId, newLists);
-  }, [stores, updateStoreLists, db]);
+  }, [stores, updateStoreLists]);
 
   const toggleItem = useCallback((storeId: string, listType: 'regular' | 'oneOff', itemId: string) => {
     const store = stores.find(s => s.id === storeId);
-    if (!store || !db) return;
+    if (!store) return;
 
     const newLists = { ...store.lists };
     if (listType === 'oneOff') {
@@ -172,22 +157,22 @@ export const useShoppingLists = () => {
       );
     }
     updateStoreLists(storeId, newLists);
-  }, [stores, updateStoreLists, db]);
+  }, [stores, updateStoreLists]);
 
   const restoreOneOffItem = useCallback((storeId: string, item: Item) => {
     const store = stores.find(s => s.id === storeId);
-    if (!store || !db) return;
+    if (!store) return;
     const newLists = { ...store.lists };
     const itemExists = newLists.oneOff.some(i => i.id === item.id);
     if (!itemExists) {
       newLists.oneOff = [item, ...newLists.oneOff];
     }
     updateStoreLists(storeId, newLists);
-  }, [stores, updateStoreLists, db]);
+  }, [stores, updateStoreLists]);
   
   const deleteItem = useCallback((storeId: string, listType: 'regular' | 'oneOff', itemId: string) => {
     const store = stores.find(s => s.id === storeId);
-    if (!store || !db) return;
+    if (!store) return;
 
     const list = store.lists[listType].filter(item => item.id !== itemId);
     const newLists = {
@@ -195,11 +180,11 @@ export const useShoppingLists = () => {
       [listType]: list,
     };
     updateStoreLists(storeId, newLists);
-  }, [stores, updateStoreLists, db]);
+  }, [stores, updateStoreLists]);
 
   const renameItem = useCallback((storeId: string, listType: 'regular' | 'oneOff', itemId: string, newText: string) => {
     const store = stores.find(s => s.id === storeId);
-    if (!store || !db) return;
+    if (!store) return;
     const list = store.lists[listType].map(item => 
       item.id === itemId ? { ...item, text: newText } : item
     );
@@ -208,11 +193,11 @@ export const useShoppingLists = () => {
       [listType]: list,
     };
     updateStoreLists(storeId, newLists);
-  }, [stores, updateStoreLists, db]);
+  }, [stores, updateStoreLists]);
 
   const moveItem = useCallback((storeId: string, itemId: string) => {
     const store = stores.find(s => s.id === storeId);
-    if (!store || !db) return;
+    if (!store) return;
 
     let itemToMove: Item | undefined;
     let sourceList: 'regular' | 'oneOff' | null = null;
@@ -239,7 +224,7 @@ export const useShoppingLists = () => {
       [destinationList]: updatedDestinationList,
     };
     updateStoreLists(storeId, newLists);
-  }, [stores, updateStoreLists, db]);
+  }, [stores, updateStoreLists]);
 
   const reorderList = (list: Item[], dragIndex: number, hoverIndex: number) => {
     const reorderedList = [...list];
@@ -250,7 +235,7 @@ export const useShoppingLists = () => {
   
   const moveItemOrder = useCallback((storeId: string, itemId: string, direction: 'up' | 'down') => {
     const store = stores.find(s => s.id === storeId);
-    if (!store || !db) return;
+    if (!store) return;
 
     let listType: 'regular' | 'oneOff' | null = null;
     let isCompleted = false;
@@ -283,11 +268,11 @@ export const useShoppingLists = () => {
         newLists = {...store.lists, regular: finalRegularList};
     }
     updateStoreLists(storeId, newLists);
-  }, [stores, updateStoreLists, db]);
+  }, [stores, updateStoreLists]);
 
   const reorderItems = useCallback((storeId: string, listType: 'regular' | 'oneOff', isCompletedList: boolean, dragIndex: number, hoverIndex: number) => {
     const store = stores.find(s => s.id === storeId);
-    if (!store || !db) return;
+    if (!store) return;
 
     if (listType === 'oneOff') {
       const newOneOffList = reorderList(store.lists.oneOff, dragIndex, hoverIndex);
@@ -307,7 +292,7 @@ export const useShoppingLists = () => {
         newList = [...reorderedActive, ...completedItems];
     }
     updateStoreLists(storeId, { ...store.lists, regular: newList });
-  }, [stores, updateStoreLists, db]);
+  }, [stores, updateStoreLists]);
 
   return { stores, addStore, editStore, deleteStore, reorderStores, moveStoreOrder, addItem, toggleItem, deleteItem, renameItem, moveItem, moveItemOrder, reorderItems, isLoaded, iconComponents, icons, restoreOneOffItem };
 };
