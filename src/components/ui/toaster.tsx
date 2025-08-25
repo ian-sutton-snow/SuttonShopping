@@ -31,7 +31,8 @@ export function Toaster() {
         )
       })}
       <ToastViewport className={cn(
-        "fixed bottom-0 z-[100] flex max-h-screen w-full flex-col-reverse p-4 sm:right-0 sm:flex-col md:max-w-[420px]"
+        "fixed bottom-0 z-[100] flex max-h-screen w-full flex-col-reverse p-4 sm:right-0 sm:flex-col md:max-w-[420px]",
+        "pointer-events-none"
       )} />
     </ToastProvider>
   )
